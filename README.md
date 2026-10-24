@@ -93,7 +93,9 @@ Then open [http://localhost:8080](http://localhost:8080) and use **Start** and *
 current price, the RSI of the last closed candle, whether the price is above the trend filter, your USDT and coin
 balances, what the strategy would do now and the open position with its profit or loss, refreshed every 15 seconds.
 Below it, a candlestick chart of the last 150 candles shows the trend line, the bot's buys and sells and the RSI with
-its buy and sell levels. Closing the browser tab doesn't
+its buy and sell levels. At the bottom, the trades table lists every buy and sell of the current account (testnet or
+real) with its fee and, for each sell, the result after fees compared with the cost of the amount sold, plus a summary
+and a search box. Closing the browser tab doesn't
 stop the bot; stopping `app.py` does.
 
 Or only in the console:

@@ -5,6 +5,7 @@ from nicegui import run, ui
 import market
 import storage
 from chart import chart_options
+from journal import journal, local_time, summary
 from bot import Bot, load_settings, setup_logging, testnet
 from settings import INTERVALS, MIN_ORDER_USDT, SYMBOLS, Settings
 
@@ -13,6 +14,17 @@ trading_bot = Bot(load_settings())
 dashboard_exchange = market.create_exchange()
 
 SIGNAL_TEXT = {'buy': 'Buy', 'sell': 'Sell', None: 'Wait'}
+
+TRADE_COLUMNS = [
+    {'name': 'time', 'label': 'Time', 'field': 'time', 'align': 'left', 'sortable': True},
+    {'name': 'symbol', 'label': 'Symbol', 'field': 'symbol', 'align': 'left', 'sortable': True},
+    {'name': 'side', 'label': 'Side', 'field': 'side', 'align': 'left'},
+    {'name': 'amount', 'label': 'Amount', 'field': 'amount', 'align': 'right'},
+    {'name': 'price', 'label': 'Price', 'field': 'price', 'align': 'right'},
+    {'name': 'cost', 'label': 'Value (USDT)', 'field': 'cost', 'align': 'right'},
+    {'name': 'fee', 'label': 'Fee (USDT)', 'field': 'fee', 'align': 'right'},
+    {'name': 'profit', 'label': 'Result (USDT)', 'field': 'profit', 'align': 'right'},
+]
 
 
 def stat(title):
@@ -55,6 +67,29 @@ def index():
         with ui.card().classes('w-full'):
             ui.label('Chart').classes('text-lg font-semibold')
             price_chart = ui.echart({}).classes('w-full h-[480px]')
+
+        with ui.card().classes('w-full'):
+            with ui.row().classes('w-full items-center justify-between'):
+                ui.label('Trades').classes('text-lg font-semibold')
+                trades_search = ui.input(placeholder='Search').props('dense clearable')
+            trades_summary = ui.label().classes('text-gray-600')
+            trades_table = ui.table(
+                columns=TRADE_COLUMNS,
+                rows=[],
+                row_key='id',
+                pagination={'rowsPerPage': 10, 'sortBy': 'time', 'descending': True},
+            ).classes('w-full')
+            trades_table.add_slot('body-cell-side', '''
+                <q-td :props="props">
+                    <q-badge :color="props.value === 'BUY' ? 'green' : 'red'">{{ props.value }}</q-badge>
+                </q-td>
+            ''')
+            trades_table.add_slot('body-cell-profit', '''
+                <q-td :props="props" :class="props.row.profit_value > 0 ? 'text-green-600' : props.row.profit_value < 0 ? 'text-red-600' : ''">
+                    {{ props.value }}
+                </q-td>
+            ''')
+            trades_search.bind_value_to(trades_table, 'filter')
 
         with ui.card().classes('w-full'):
             ui.label('Settings').classes('text-lg font-semibold')
@@ -142,6 +177,34 @@ def index():
 
     loading = False
     chart_key = None
+    trades_count = None
+
+    def refresh_trades():
+        nonlocal trades_count
+        rows = journal(storage.get_all_trades(storage.connect(), testnet))
+        if len(rows) == trades_count:
+            return
+        trades_count = len(rows)
+        totals = summary(rows)
+        trades_summary.text = (
+            f'{len(rows)} trades · {totals["closed"]} closed · {totals["win_rate"]:.0f}% won · '
+            f'result {totals["profit"]:+.2f} USDT · fees {totals["fees"]:.2f} USDT'
+        )
+        trades_table.rows = [
+            {
+                'id': row['id'],
+                'time': local_time(row['time']),
+                'symbol': row['symbol'],
+                'side': row['side'].upper(),
+                'amount': f'{row["amount"]:.8f}',
+                'price': f'{row["price"]:,.2f}',
+                'cost': f'{row["cost"]:,.2f}',
+                'fee': f'{row["fee_usdt"]:.4f}',
+                'profit': '' if row['profit'] is None else f'{row["profit"]:+.4f} ({row["profit_percent"]:+.2f}%)',
+                'profit_value': row['profit'] or 0,
+            }
+            for row in rows
+        ]
 
     async def refresh_market():
         nonlocal loading, chart_key
@@ -158,6 +221,7 @@ def index():
             loading = False
         if data is None:
             return
+        refresh_trades()
 
         coin = data['coin']
         price.text = f'{data["price"]:,.2f} USDT'

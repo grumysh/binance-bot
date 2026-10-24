@@ -106,7 +106,7 @@ class Bot:
                 order = self.exchange.create_market_sell_order(settings.symbol, amount)
                 leftover = max(available - order['filled'], 0.0)
                 storage.record_sell(db, order, testnet, leftover)
-                profit = order['cost'] - position['cost']
+                profit = order['cost'] - order['filled'] * position['entry_price']
                 log.info(f'SELL {amount} {coin} at {order["average"]} for {order["cost"]} USDT (P/L before fees: {profit:.4f} USDT, leftover kept: {leftover:.8f} {coin})')
 
         except Exception:

@@ -87,6 +87,10 @@ def insert_trade(db, order, side, amount, testnet):
     )
 
 
+def get_all_trades(db, testnet):
+    return db.execute('SELECT * FROM trades WHERE testnet = ? ORDER BY time', (testnet,)).fetchall()
+
+
 def get_trades(db, symbol, testnet, since):
     return db.execute(
         'SELECT * FROM trades WHERE symbol = ? AND testnet = ? AND time >= ? ORDER BY time',
