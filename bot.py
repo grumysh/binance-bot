@@ -19,9 +19,20 @@ exchange.set_sandbox_mode(os.getenv('BINANCE_TESTNET', 'true').lower() != 'false
 position_amount = 0.0
 
 
+def interval_ms():
+    return exchange.parse_timeframe(settings.interval) * 1000
+
+
 def get_closes():
     candles = exchange.fetch_ohlcv(settings.symbol, settings.interval, limit=100)
-    return [candle[4] for candle in candles]
+    now = exchange.milliseconds()
+    closed = [candle for candle in candles if candle[0] + interval_ms() <= now]
+    return [candle[4] for candle in closed]
+
+
+def wait_for_next_candle():
+    now = exchange.milliseconds()
+    time.sleep((interval_ms() - now % interval_ms()) / 1000 + 2)
 
 
 def rsi(closes, period):
@@ -74,4 +85,4 @@ def trade():
 if __name__ == '__main__':
     while True:
         trade()
-        time.sleep(60)
+        wait_for_next_candle()

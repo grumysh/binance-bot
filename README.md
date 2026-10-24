@@ -12,9 +12,9 @@ funds unless you explicitly switch it to the real exchange.
 
 ## How it works
 
-Every minute the bot:
+Every time a candle closes, the bot:
 
-1. Downloads the last 100 one-minute candles for the selected symbol (`BTC/USDT` by default).
+1. Downloads the last closed one-minute candles for the selected symbol (`BTC/USDT` by default).
 2. Calculates the 14-period RSI from the closing prices.
 3. **Buys** 10 USDT worth of the coin at market price when the RSI drops below 30 and it has no open position.
 4. **Sells** only the amount it bought, at market price, when the RSI goes above 70 and it has an open position. The
@@ -31,7 +31,6 @@ live in `settings.py`.
 
 - The open position is kept in memory only. If the bot restarts while holding a coin, it won't sell it.
 - There is no stop loss.
-- The RSI uses the current candle, which is still open, so the signal can change within the same minute.
 
 ## Running it
 
