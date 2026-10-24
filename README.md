@@ -16,11 +16,11 @@ funds unless you explicitly switch it to the real exchange.
 
 Every time a candle closes, the bot:
 
-1. Downloads the last closed one-minute candles for the selected symbol (`BTC/USDT` by default).
+1. Downloads the last closed candles for the selected symbol and interval (`BTC/USDT` and one hour by default).
 2. Calculates the 14-period RSI from the closing prices.
 3. **Buys** 10 USDT worth of the coin at market price when the RSI drops below 30 and it has no open position. If the
-   trend filter is on (`trend_period` in `settings.py`), it only buys while the price is above the average of the last
-   `trend_period` candles, so it doesn't buy into a falling market.
+   trend filter is on (`trend_period` in `settings.py`, 200 by default), it only buys while the price is above the
+   average of the last `trend_period` candles, so it doesn't buy into a falling market.
 4. **Sells** only the amount it bought, at market price, when the RSI goes above 70 and it has an open position. The
    amount is rounded to the step size Binance accepts.
 
@@ -132,5 +132,6 @@ Everything the bot does (RSI on each candle, buys, sells and errors) is printed 
 
 ## Disclaimer
 
-This is a learning project, not financial advice. A 30/70 RSI strategy on one-minute candles usually loses money once
-trading fees are included. Don't run it with real funds.
+This is a learning project, not financial advice. A 30/70 RSI strategy on short candles loses money once trading fees
+are included, and even the default settings only look good on past data, with few trades. Don't run it with real
+funds.

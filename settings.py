@@ -13,11 +13,11 @@ SYMBOLS = [
 @dataclass
 class Settings:
     symbol: str = 'BTC/USDT'
-    interval: str = '1m'
+    interval: str = '1h'
     rsi_period: int = 14
     rsi_buy_below: float = 30
     rsi_sell_above: float = 70
-    trend_period: int = 0
+    trend_period: int = 200
     order_size_usdt: float = 10
 
     def __post_init__(self):
