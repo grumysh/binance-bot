@@ -7,6 +7,7 @@ from pathlib import Path
 import ccxt
 from dotenv import load_dotenv
 
+import storage
 from settings import Settings
 
 load_dotenv()
@@ -20,7 +21,7 @@ exchange = ccxt.binance({
 })
 exchange.set_sandbox_mode(testnet)
 
-position_amount = 0.0
+db = storage.connect()
 
 log = logging.getLogger('bot')
 
@@ -75,24 +76,26 @@ def bought_amount(order, coin):
 
 
 def trade():
-    global position_amount
     try:
         closes = get_closes()
         last_rsi = rsi(closes, settings.rsi_period)
         log.info(f'{settings.symbol} RSI: {last_rsi:.2f}')
 
         coin = settings.symbol.split('/')[0]
+        position = storage.get_position(db, settings.symbol, testnet)
 
-        if last_rsi < settings.rsi_buy_below and position_amount == 0:
+        if last_rsi < settings.rsi_buy_below and position is None:
             order = exchange.create_market_buy_order_with_cost(settings.symbol, settings.order_size_usdt)
-            position_amount = bought_amount(order, coin)
-            log.info(f'BUY {position_amount} {coin} at {order["average"]} for {order["cost"]} USDT')
+            amount = bought_amount(order, coin)
+            storage.record_buy(db, order, amount, testnet)
+            log.info(f'BUY {amount} {coin} at {order["average"]} for {order["cost"]} USDT')
 
-        if last_rsi > settings.rsi_sell_above and position_amount > 0:
-            amount = exchange.amount_to_precision(settings.symbol, position_amount)
+        if last_rsi > settings.rsi_sell_above and position is not None:
+            amount = exchange.amount_to_precision(settings.symbol, position['amount'])
             order = exchange.create_market_sell_order(settings.symbol, amount)
-            log.info(f'SELL {amount} {coin} at {order["average"]} for {order["cost"]} USDT')
-            position_amount = 0.0
+            storage.record_sell(db, order, testnet)
+            profit = order['cost'] - position['cost']
+            log.info(f'SELL {amount} {coin} at {order["average"]} for {order["cost"]} USDT (P/L before fees: {profit:.4f} USDT)')
 
     except Exception:
         log.exception('Error')
@@ -101,6 +104,9 @@ def trade():
 if __name__ == '__main__':
     setup_logging()
     log.info(f'Starting on {"testnet" if testnet else "REAL ACCOUNT"} with {settings}')
+    position = storage.get_position(db, settings.symbol, testnet)
+    if position is not None:
+        log.info(f'Open position: {position["amount"]} at {position["entry_price"]} since {position["opened_at"]}')
     while True:
         trade()
         wait_for_next_candle()

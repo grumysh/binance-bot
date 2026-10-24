@@ -9,6 +9,7 @@ funds unless you explicitly switch it to the real exchange.
 - **[uv](https://docs.astral.sh/uv/)** for the Python version, virtual environment and dependencies
 - **[ccxt](https://github.com/ccxt/ccxt)** to talk to Binance
 - **[python-dotenv](https://github.com/theskumar/python-dotenv)** to load the API keys from `.env`
+- **SQLite** to store trades and open positions
 
 ## How it works
 
@@ -27,9 +28,19 @@ live in `settings.py`.
 |---|---|
 | `BTC/USDT`, `ETH/USDT`, `SOL/USDT`, `BNB/USDT`, `XRP/USDT`, `DOGE/USDT` | Highest volume, they move on the testnet |
 
+### Data
+
+The bot keeps its data in a SQLite file, `bot.db`, created next to `bot.py` on the first run:
+
+| Table | Contents |
+|---|---|
+| `trades` | Every buy and sell: time, symbol, side, amount, price, cost, fee, testnet or real, Binance order id |
+| `positions` | The open position per symbol and account (testnet or real), so the bot picks it up again after a restart |
+
+You can open it with [DB Browser for SQLite](https://sqlitebrowser.org/).
+
 ### Limitations
 
-- The open position is kept in memory only. If the bot restarts while holding a coin, it won't sell it.
 - There is no stop loss.
 
 ## Running it
