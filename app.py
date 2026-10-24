@@ -4,6 +4,7 @@ import backtest_page
 import market
 import notifier
 import storage
+import strategy
 from bot import Bot, load_settings, setup_logging, testnet
 from chart import chart_options
 from components import apply_settings, header, read_settings, settings_form, show_settings, stat
@@ -32,6 +33,10 @@ TRADE_COLUMNS = [
 def index():
     with ui.column().classes('w-full max-w-3xl mx-auto p-6 gap-6'):
         header('Bot')
+        if not testnet:
+            with ui.row().classes('w-full items-center gap-2 p-3 rounded bg-red-600 text-white'):
+                ui.icon('warning')
+                ui.label('REAL ACCOUNT: the bot trades with real money.').classes('font-semibold')
 
         with ui.card().classes('w-full'):
             with ui.row().classes('w-full items-center justify-between'):
@@ -246,7 +251,38 @@ def index():
             price_chart.options.update(chart_options(data['chart'], data['trades'], settings))
             price_chart.update()
 
-    start_button.on_click(lambda: (trading_bot.start(), refresh()))
+    with ui.dialog() as confirm_dialog, ui.card().classes('max-w-lg'):
+        ui.label('Trade with real money?').classes('text-xl font-bold text-red-600')
+        confirm_summary = ui.label()
+        ui.label('Type REAL to start the bot on your real Binance account.')
+        confirm_input = ui.input(placeholder='REAL')
+        with ui.row().classes('w-full justify-end'):
+            ui.button('Cancel', on_click=confirm_dialog.close).props('flat')
+            confirm_button = ui.button('Start with real money', color='red')
+        confirm_button.bind_enabled_from(confirm_input, 'value', backward=lambda value: value == 'REAL')
+
+    def start():
+        if testnet:
+            trading_bot.start()
+            refresh()
+            return
+        settings = trading_bot.settings
+        confirm_summary.text = (
+            f'{settings.symbol} · {settings.interval} candles · {strategy.name(settings)} · '
+            f'{settings.order_size_usdt:g} USDT per trade · stop loss '
+            f'{f"{settings.stop_loss_percent:g}%" if settings.stop_loss_percent else "off"} · daily loss limit '
+            f'{f"{settings.daily_loss_limit_usdt:g} USDT" if settings.daily_loss_limit_usdt else "off"}'
+        )
+        confirm_input.value = ''
+        confirm_dialog.open()
+
+    def confirm_start():
+        confirm_dialog.close()
+        trading_bot.start()
+        refresh()
+
+    confirm_button.on_click(confirm_start)
+    start_button.on_click(start)
     stop_button.on_click(lambda: (trading_bot.stop(), refresh()))
     refresh()
     ui.timer(1.0, refresh)

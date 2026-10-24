@@ -98,6 +98,18 @@ Fill in `.env`:
 | `DISCORD_WEBHOOK_URL` | Optional. Discord webhook for notifications |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Optional. Telegram bot and chat for notifications |
 
+### Trading with real money
+
+Don't, unless you accept losing the money you put in. If you do:
+
+1. Create an API key on [binance.com](https://www.binance.com/en/my/settings/api-management) with **spot trading**
+   enabled and **withdrawals disabled**, and restrict it to your IP address.
+2. Put that key and secret in `.env` (testnet keys don't work on the real exchange) and set `BINANCE_TESTNET=false`.
+3. Start with a small order size and the daily loss limit on.
+
+In real mode the app shows a red banner, and **Start** asks you to type `REAL` before the bot runs. `uv run bot.py`
+asks the same in the console. Trades, positions and leftovers are kept apart from the testnet ones in `bot.db`.
+
 ### Notifications
 
 The bot can send a message when it starts or stops, on every buy, sell and stop loss, and on errors (a repeated error

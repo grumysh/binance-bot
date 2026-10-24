@@ -151,4 +151,10 @@ class Bot:
 
 if __name__ == '__main__':
     setup_logging()
-    Bot(load_settings()).run()
+    settings = load_settings()
+    if not testnet:
+        print(f'REAL ACCOUNT: {settings.symbol} {settings.interval} {strategy.name(settings)}, '
+              f'{settings.order_size_usdt:g} USDT per trade.')
+        if input('Type REAL to trade with real money: ').strip() != 'REAL':
+            raise SystemExit('Not started.')
+    Bot(settings).run()
