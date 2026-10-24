@@ -33,6 +33,16 @@ def setup_logging():
     )
 
 
+def load_settings():
+    data = storage.load_settings(storage.connect())
+    if data:
+        try:
+            return Settings.from_dict(data)
+        except ValueError:
+            log.warning('Saved settings are not valid anymore, using the defaults')
+    return Settings()
+
+
 def bought_amount(order, coin):
     fee = sum(fee['cost'] for fee in order.get('fees') or [] if fee['currency'] == coin)
     return order['filled'] - fee
@@ -122,4 +132,4 @@ class Bot:
 
 if __name__ == '__main__':
     setup_logging()
-    Bot(Settings()).run()
+    Bot(load_settings()).run()

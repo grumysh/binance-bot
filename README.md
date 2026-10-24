@@ -27,7 +27,8 @@ Every time a candle closes, the bot:
 
 The available symbols and the default settings (symbol, candle interval, RSI period, buy and sell levels, trend filter,
 order size)
-live in `settings.py`.
+live in `settings.py`. You can change them from the app while the bot is stopped; they are validated and saved in
+`bot.db`, and both `app.py` and `bot.py` use the saved settings.
 
 | Symbol | Notes |
 |---|---|
@@ -41,6 +42,7 @@ The bot keeps its data in a SQLite file, `bot.db`, created next to `bot.py` on t
 |---|---|
 | `trades` | Every buy and sell: time, symbol, side, amount, price, cost, fee, testnet or real, Binance order id |
 | `positions` | The open position per symbol and account (testnet or real), so the bot picks it up again after a restart |
+| `settings` | The settings saved from the app |
 | `leftovers` | Coin left unsold after Binance's rounding, added to the next sell so it never piles up |
 | `candles` | Historical candles from the real Binance market, used for backtesting |
 

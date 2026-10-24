@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from pathlib import Path
 
@@ -40,6 +41,12 @@ def connect(path=DB_PATH):
                 testnet INTEGER NOT NULL,
                 amount REAL NOT NULL,
                 PRIMARY KEY (symbol, testnet)
+            )
+        ''')
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS settings (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                data TEXT NOT NULL
             )
         ''')
         db.execute('''
@@ -128,3 +135,16 @@ def load_candles(db, symbol, interval, since):
         'SELECT * FROM candles WHERE symbol = ? AND interval = ? AND time >= ? ORDER BY time',
         (symbol, interval, since),
     ).fetchall()
+
+
+def load_settings(db):
+    row = db.execute('SELECT data FROM settings WHERE id = 1').fetchone()
+    return json.loads(row['data']) if row else None
+
+
+def save_settings(db, data):
+    with db:
+        db.execute(
+            'INSERT INTO settings (id, data) VALUES (1, ?) ON CONFLICT (id) DO UPDATE SET data = excluded.data',
+            (json.dumps(data),),
+        )
