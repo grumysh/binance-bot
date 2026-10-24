@@ -69,6 +69,9 @@ uv run bot.py
 
 Stop it with `Ctrl+C`.
 
+Everything the bot does (RSI on each candle, buys, sells and errors) is printed to the console and saved to
+`logs/bot.log`. The file rotates at midnight and the last 30 days are kept.
+
 ## Disclaimer
 
 This is a learning project, not financial advice. A 30/70 RSI strategy on one-minute candles usually loses money once

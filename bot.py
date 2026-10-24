@@ -1,5 +1,8 @@
+import logging
 import os
 import time
+from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
 
 import ccxt
 from dotenv import load_dotenv
@@ -9,14 +12,29 @@ from settings import Settings
 load_dotenv()
 
 settings = Settings()
+testnet = os.getenv('BINANCE_TESTNET', 'true').lower() != 'false'
 
 exchange = ccxt.binance({
     'apiKey': os.getenv('BINANCE_API_KEY'),
     'secret': os.getenv('BINANCE_API_SECRET'),
 })
-exchange.set_sandbox_mode(os.getenv('BINANCE_TESTNET', 'true').lower() != 'false')
+exchange.set_sandbox_mode(testnet)
 
 position_amount = 0.0
+
+log = logging.getLogger('bot')
+
+
+def setup_logging():
+    logs_dir = Path(__file__).parent / 'logs'
+    logs_dir.mkdir(exist_ok=True)
+    file_handler = TimedRotatingFileHandler(logs_dir / 'bot.log', when='midnight', backupCount=30, encoding='utf-8')
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        handlers=[logging.StreamHandler(), file_handler],
+    )
 
 
 def interval_ms():
@@ -61,28 +79,28 @@ def trade():
     try:
         closes = get_closes()
         last_rsi = rsi(closes, settings.rsi_period)
-        print(f'{settings.symbol} RSI: {last_rsi:.2f}')
+        log.info(f'{settings.symbol} RSI: {last_rsi:.2f}')
 
         coin = settings.symbol.split('/')[0]
 
         if last_rsi < settings.rsi_buy_below and position_amount == 0:
-            print('BUYING...')
             order = exchange.create_market_buy_order_with_cost(settings.symbol, settings.order_size_usdt)
             position_amount = bought_amount(order, coin)
-            print(f'Bought {position_amount} {coin}')
+            log.info(f'BUY {position_amount} {coin} at {order["average"]} for {order["cost"]} USDT')
 
         if last_rsi > settings.rsi_sell_above and position_amount > 0:
-            print('SELLING...')
             amount = exchange.amount_to_precision(settings.symbol, position_amount)
-            exchange.create_market_sell_order(settings.symbol, amount)
-            print(f'Sold {amount} {coin}')
+            order = exchange.create_market_sell_order(settings.symbol, amount)
+            log.info(f'SELL {amount} {coin} at {order["average"]} for {order["cost"]} USDT')
             position_amount = 0.0
 
-    except Exception as err:
-        print('Error:', err)
+    except Exception:
+        log.exception('Error')
 
 
 if __name__ == '__main__':
+    setup_logging()
+    log.info(f'Starting on {"testnet" if testnet else "REAL ACCOUNT"} with {settings}')
     while True:
         trade()
         wait_for_next_candle()
