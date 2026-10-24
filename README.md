@@ -14,20 +14,24 @@ funds unless you explicitly switch it to the real exchange.
 
 Every minute the bot:
 
-1. Downloads the last 100 one-minute candles for `XAI/USDT`.
+1. Downloads the last 100 one-minute candles for the selected symbol (`BTC/USDT` by default).
 2. Calculates the 14-period RSI from the closing prices.
-3. **Buys** 10 USDT worth of XAI at market price when the RSI drops below 30 and it has no open position.
-4. **Sells** all the free XAI at market price when the RSI goes above 70 and it has an open position. The amount is
-   rounded to the step size Binance accepts.
+3. **Buys** 10 USDT worth of the coin at market price when the RSI drops below 30 and it has no open position.
+4. **Sells** only the amount it bought, at market price, when the RSI goes above 70 and it has an open position. The
+   amount is rounded to the step size Binance accepts.
 
-The symbol, candle interval, RSI period and order size are constants at the top of `bot.py`.
+The available symbols and the default settings (symbol, candle interval, RSI period, buy and sell levels, order size)
+live in `settings.py`.
+
+| Symbol | Notes |
+|---|---|
+| `BTC/USDT`, `ETH/USDT`, `SOL/USDT`, `BNB/USDT`, `XRP/USDT`, `DOGE/USDT` | Highest volume, they move on the testnet |
 
 ### Limitations
 
-- The open position is kept in memory only. If the bot restarts while holding XAI, it won't sell it.
+- The open position is kept in memory only. If the bot restarts while holding a coin, it won't sell it.
 - There is no stop loss.
 - The RSI uses the current candle, which is still open, so the signal can change within the same minute.
-- XAI/USDT barely moves on the testnet, so the bot will rarely trade there.
 
 ## Running it
 

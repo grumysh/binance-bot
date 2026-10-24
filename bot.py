@@ -4,12 +4,11 @@ import time
 import ccxt
 from dotenv import load_dotenv
 
+from settings import Settings
+
 load_dotenv()
 
-SYMBOL = 'XAI/USDT'
-INTERVAL = '1m'
-RSI_PERIOD = 14
-ORDER_SIZE_USDT = 10
+settings = Settings()
 
 exchange = ccxt.binance({
     'apiKey': os.getenv('BINANCE_API_KEY'),
@@ -17,11 +16,11 @@ exchange = ccxt.binance({
 })
 exchange.set_sandbox_mode(os.getenv('BINANCE_TESTNET', 'true').lower() != 'false')
 
-in_position = False
+position_amount = 0.0
 
 
 def get_closes():
-    candles = exchange.fetch_ohlcv(SYMBOL, INTERVAL, limit=100)
+    candles = exchange.fetch_ohlcv(settings.symbol, settings.interval, limit=100)
     return [candle[4] for candle in candles]
 
 
@@ -41,25 +40,32 @@ def rsi(closes, period):
     return 100 - 100 / (1 + avg_gain / avg_loss)
 
 
+def bought_amount(order, coin):
+    fee = sum(fee['cost'] for fee in order.get('fees') or [] if fee['currency'] == coin)
+    return order['filled'] - fee
+
+
 def trade():
-    global in_position
+    global position_amount
     try:
         closes = get_closes()
-        last_rsi = rsi(closes, RSI_PERIOD)
-        print(f'RSI: {last_rsi:.2f}')
+        last_rsi = rsi(closes, settings.rsi_period)
+        print(f'{settings.symbol} RSI: {last_rsi:.2f}')
 
-        if last_rsi < 30 and not in_position:
+        coin = settings.symbol.split('/')[0]
+
+        if last_rsi < settings.rsi_buy_below and position_amount == 0:
             print('BUYING...')
-            exchange.create_market_buy_order_with_cost(SYMBOL, ORDER_SIZE_USDT)
-            in_position = True
+            order = exchange.create_market_buy_order_with_cost(settings.symbol, settings.order_size_usdt)
+            position_amount = bought_amount(order, coin)
+            print(f'Bought {position_amount} {coin}')
 
-        if last_rsi > 70 and in_position:
+        if last_rsi > settings.rsi_sell_above and position_amount > 0:
             print('SELLING...')
-            asset = SYMBOL.split('/')[0]
-            qty = exchange.fetch_balance()['free'].get(asset, 0)
-            if qty > 0:
-                exchange.create_market_sell_order(SYMBOL, exchange.amount_to_precision(SYMBOL, qty))
-                in_position = False
+            amount = exchange.amount_to_precision(settings.symbol, position_amount)
+            exchange.create_market_sell_order(settings.symbol, amount)
+            print(f'Sold {amount} {coin}')
+            position_amount = 0.0
 
     except Exception as err:
         print('Error:', err)
