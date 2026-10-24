@@ -196,6 +196,17 @@ another, so check the best ones on a different period before trusting them.
 Everything the bot does (RSI on each candle, buys, sells and errors) is printed to the console and saved to
 `logs/bot.log`. The file rotates at midnight and the last 30 days are kept.
 
+## Tests
+
+```bash
+uv run pytest
+```
+
+The tests cover the indicators, the four strategies with the trend filter, stop loss and daily loss limit, the settings
+validation, the database, the trade results, the backtest simulation, the bot's buys and sells (including Binance's
+rounding and the leftover coin) and both pages of the app. They use a fake exchange and a temporary database, so they
+run without internet and never touch `bot.db`, the logs or your Binance account.
+
 ## Disclaimer
 
 This is a learning project, not financial advice. A 30/70 RSI strategy on short candles loses money once trading fees

@@ -5,8 +5,8 @@ from pathlib import Path
 DB_PATH = Path(__file__).parent / 'bot.db'
 
 
-def connect(path=DB_PATH):
-    db = sqlite3.connect(path)
+def connect(path=None):
+    db = sqlite3.connect(path or DB_PATH)
     db.row_factory = sqlite3.Row
     with db:
         db.execute('''
