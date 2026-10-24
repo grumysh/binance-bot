@@ -112,6 +112,16 @@ each signal, with Binance's rounding and the given fee per trade (0.1% by defaul
 | Average duration | Average time between a buy and its sell |
 | Total | Profit of the closed trades plus the open position, compared with buying and holding |
 
+### 7. Compare configurations
+
+```bash
+uv run compare.py --symbols BTC/USDT ETH/USDT --days 180 --fee 0.1
+```
+
+It backtests every combination of candle interval (5m, 15m, 1h, 4h) and RSI levels (20/80, 25/75, 30/70, 35/65) for
+the given symbols and prints a table sorted by total profit. A configuration that wins on one period can lose on
+another, so check the best ones on a different period before trusting them.
+
 ### Logs
 
 Everything the bot does (RSI on each candle, buys, sells and errors) is printed to the console and saved to
