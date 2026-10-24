@@ -24,9 +24,11 @@ Every time a candle closes, the bot:
    average of the last `trend_period` candles, so it doesn't buy into a falling market.
 4. **Sells** only the amount it bought, at market price, when the RSI goes above 70 and it has an open position. The
    amount is rounded to the step size Binance accepts.
+5. If the stop loss is on (`stop_loss_percent`, off by default), it also sells when a candle closes that percentage
+   below the buy price. It is checked at the candle close, so the real loss can be bigger than the percentage.
 
 The available symbols and the default settings (symbol, candle interval, RSI period, buy and sell levels, trend filter,
-order size)
+stop loss, order size)
 live in `settings.py`. You can change them from the app while the bot is stopped; they are validated and saved in
 `bot.db`, and both `app.py` and `bot.py` use the saved settings.
 

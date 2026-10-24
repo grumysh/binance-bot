@@ -25,7 +25,8 @@ def simulate(candles, settings, fee_rate):
     leftover = 0.0
 
     for current, following in zip(rows, rows[1:]):
-        action = strategy.signal(current.rsi, current.close, current.trend, position is not None, settings)
+        entry_price = position['entry_price'] if position is not None else None
+        action = strategy.signal(current.rsi, current.close, current.trend, entry_price, settings)
         price = following.open
 
         if action == 'buy':
@@ -39,7 +40,7 @@ def simulate(candles, settings, fee_rate):
                 'fees': fee * price,
             }
 
-        elif action == 'sell':
+        elif action in ('sell', 'stop_loss'):
             previous_leftover = leftover
             available = position['amount'] + leftover
             amount = float(exchange.amount_to_precision(settings.symbol, available))
@@ -50,6 +51,7 @@ def simulate(candles, settings, fee_rate):
                 **position,
                 'exit_time': following.Index,
                 'exit_price': price,
+                'exit_reason': 'stop loss' if action == 'stop_loss' else 'RSI',
                 'proceeds': proceeds - fee,
                 'fees': position['fees'] + fee,
                 'profit': proceeds - fee - position['cost'] + (leftover - previous_leftover) * price,
@@ -118,6 +120,7 @@ def print_summary(result, settings, fee_rate):
 
     print(f'{settings.symbol} {settings.interval} | RSI {settings.rsi_period} buy < {settings.rsi_buy_below} '
           f'sell > {settings.rsi_sell_above} | trend filter {settings.trend_period or "off"} '
+          f'| stop loss {f"{settings.stop_loss_percent:g}%" if settings.stop_loss_percent else "off"} '
           f'| {settings.order_size_usdt} USDT per trade | fee {fee_rate * 100}%')
     print()
     print(f'Closed trades:        {m["trades"]}')

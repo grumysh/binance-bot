@@ -22,6 +22,7 @@ class Settings:
     rsi_buy_below: float = 30
     rsi_sell_above: float = 70
     trend_period: int = 200
+    stop_loss_percent: float = 0
     order_size_usdt: float = 10
 
     def __post_init__(self):
@@ -35,6 +36,8 @@ class Settings:
             raise ValueError('The RSI levels must be between 0 and 100, with the buy level below the sell level')
         if self.trend_period < 0:
             raise ValueError('The trend period must be 0 (off) or more')
+        if not 0 <= self.stop_loss_percent < 100:
+            raise ValueError('The stop loss must be between 0 (off) and 100%')
         if self.order_size_usdt < MIN_ORDER_USDT:
             raise ValueError(f'The order size must be at least {MIN_ORDER_USDT} USDT, the Binance minimum')
 

@@ -70,7 +70,7 @@ def snapshot(exchange, settings):
         'last_close': closes.iloc[-1],
         'rsi': rsi,
         'trend': trend,
-        'signal': strategy.signal(rsi, closes.iloc[-1], trend, position is not None, settings),
+        'signal': strategy.signal(rsi, closes.iloc[-1], trend, position and position['entry_price'], settings),
         'coin_balance': balance.get(coin, 0.0),
         'usdt_balance': balance.get('USDT', 0.0),
         'position': position,

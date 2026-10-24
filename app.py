@@ -13,7 +13,7 @@ setup_logging()
 trading_bot = Bot(load_settings())
 dashboard_exchange = market.create_exchange()
 
-SIGNAL_TEXT = {'buy': 'Buy', 'sell': 'Sell', None: 'Wait'}
+SIGNAL_TEXT = {'buy': 'Buy', 'sell': 'Sell', 'stop_loss': 'Stop loss', None: 'Wait'}
 
 TRADE_COLUMNS = [
     {'name': 'time', 'label': 'Time', 'field': 'time', 'align': 'left', 'sortable': True},

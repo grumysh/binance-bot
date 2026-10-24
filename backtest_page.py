@@ -16,6 +16,7 @@ BACKTEST_COLUMNS = [
     {'name': 'entry_price', 'label': 'Buy price', 'field': 'entry_price', 'align': 'right'},
     {'name': 'exit_time', 'label': 'Sold', 'field': 'exit_time', 'align': 'left'},
     {'name': 'exit_price', 'label': 'Sell price', 'field': 'exit_price', 'align': 'right'},
+    {'name': 'exit_reason', 'label': 'Exit', 'field': 'exit_reason', 'align': 'left'},
     {'name': 'duration', 'label': 'Duration', 'field': 'duration', 'align': 'right'},
     {'name': 'profit', 'label': 'Result (USDT)', 'field': 'profit', 'align': 'right'},
 ]
@@ -120,7 +121,8 @@ def register(trading_bot):
             results_card.visible = True
             results_title.text = (
                 f'{settings.symbol} {settings.interval} · last {days_count} days · RSI {settings.rsi_buy_below}/'
-                f'{settings.rsi_sell_above} · trend filter {settings.trend_period or "off"} · fee {fee_rate * 100:g}%'
+                f'{settings.rsi_sell_above} · trend filter {settings.trend_period or "off"} · '
+                f'stop loss {f"{settings.stop_loss_percent:g}%" if settings.stop_loss_percent else "off"} · fee {fee_rate * 100:g}%'
             )
             total.text = f'{m["total"]:+.2f} USDT ({m["total_percent"]:+.1f}%)'
             total.classes(replace=f'text-xl font-semibold {"text-green-600" if m["total"] > 0 else "text-red-600"}')
@@ -151,6 +153,7 @@ def register(trading_bot):
                     'entry_price': f'{trade["entry_price"]:,.2f}',
                     'exit_time': local_time(trade['exit_time']),
                     'exit_price': f'{trade["exit_price"]:,.2f}',
+                    'exit_reason': trade['exit_reason'],
                     'duration': format_duration(trade['exit_time'] - trade['entry_time']),
                     'profit': f'{trade["profit"]:+.4f}',
                     'profit_value': trade['profit'],

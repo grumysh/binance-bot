@@ -92,7 +92,8 @@ class Bot:
 
             coin = settings.symbol.split('/')[0]
             position = storage.get_position(db, settings.symbol, testnet)
-            action = strategy.signal(last_rsi, closes.iloc[-1], last_trend, position is not None, settings)
+            entry_price = position['entry_price'] if position is not None else None
+            action = strategy.signal(last_rsi, closes.iloc[-1], last_trend, entry_price, settings)
 
             if action == 'buy':
                 order = self.exchange.create_market_buy_order_with_cost(settings.symbol, settings.order_size_usdt)
@@ -100,14 +101,15 @@ class Bot:
                 storage.record_buy(db, order, amount, testnet)
                 log.info(f'BUY {amount} {coin} at {order["average"]} for {order["cost"]} USDT')
 
-            if action == 'sell':
+            if action in ('sell', 'stop_loss'):
                 available = position['amount'] + storage.get_leftover(db, settings.symbol, testnet)
                 amount = self.exchange.amount_to_precision(settings.symbol, available)
                 order = self.exchange.create_market_sell_order(settings.symbol, amount)
                 leftover = max(available - order['filled'], 0.0)
                 storage.record_sell(db, order, testnet, leftover)
                 profit = order['cost'] - order['filled'] * position['entry_price']
-                log.info(f'SELL {amount} {coin} at {order["average"]} for {order["cost"]} USDT (P/L before fees: {profit:.4f} USDT, leftover kept: {leftover:.8f} {coin})')
+                reason = 'STOP LOSS' if action == 'stop_loss' else 'SELL'
+                log.info(f'{reason} {amount} {coin} at {order["average"]} for {order["cost"]} USDT (P/L before fees: {profit:.4f} USDT, leftover kept: {leftover:.8f} {coin})')
 
         except Exception:
             log.exception('Error')
