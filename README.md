@@ -100,9 +100,17 @@ uv run backtest.py --symbol BTC/USDT --interval 1m --days 30 --fee 0.1
 ```
 
 It downloads any missing candles and replays the strategy on them, buying and selling at the open of the candle after
-each signal, with Binance's rounding and the given fee per trade (0.1% by default). It prints the profit of the closed
-trades, the fees paid, the value of the coin left unsold after rounding, the open position and a buy and hold
-comparison.
+each signal, with Binance's rounding and the given fee per trade (0.1% by default). It prints:
+
+| Metric | Meaning |
+|---|---|
+| Win rate | Percentage of closed trades with a profit |
+| Average win / loss | Average profit of the winning and of the losing trades |
+| Best / worst trade | Biggest single profit and loss |
+| Profit factor | Total won divided by total lost. Above 1 the strategy makes money |
+| Max drawdown | Biggest drop of the accumulated profit from its highest point |
+| Average duration | Average time between a buy and its sell |
+| Total | Profit of the closed trades plus the open position, compared with buying and holding |
 
 ### Logs
 
