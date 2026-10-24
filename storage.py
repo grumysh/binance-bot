@@ -34,6 +34,19 @@ def connect(path=DB_PATH):
                 PRIMARY KEY (symbol, testnet)
             )
         ''')
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS candles (
+                symbol TEXT NOT NULL,
+                interval TEXT NOT NULL,
+                time INTEGER NOT NULL,
+                open REAL NOT NULL,
+                high REAL NOT NULL,
+                low REAL NOT NULL,
+                close REAL NOT NULL,
+                volume REAL NOT NULL,
+                PRIMARY KEY (symbol, interval, time)
+            )
+        ''')
     return db
 
 
@@ -76,3 +89,22 @@ def record_sell(db, order, testnet):
     with db:
         insert_trade(db, order, 'sell', order['filled'], testnet)
         db.execute('DELETE FROM positions WHERE symbol = ? AND testnet = ?', (order['symbol'], testnet))
+
+
+def save_candles(db, symbol, interval, candles):
+    with db:
+        db.executemany(
+            'INSERT OR IGNORE INTO candles (symbol, interval, time, open, high, low, close, volume) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [(symbol, interval, *candle) for candle in candles],
+        )
+
+
+def candle_range(db, symbol, interval):
+    return db.execute('SELECT MIN(time), MAX(time) FROM candles WHERE symbol = ? AND interval = ?', (symbol, interval)).fetchone()
+
+
+def load_candles(db, symbol, interval, since):
+    return db.execute(
+        'SELECT * FROM candles WHERE symbol = ? AND interval = ? AND time >= ? ORDER BY time',
+        (symbol, interval, since),
+    ).fetchall()

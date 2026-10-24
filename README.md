@@ -36,6 +36,7 @@ The bot keeps its data in a SQLite file, `bot.db`, created next to `bot.py` on t
 |---|---|
 | `trades` | Every buy and sell: time, symbol, side, amount, price, cost, fee, testnet or real, Binance order id |
 | `positions` | The open position per symbol and account (testnet or real), so the bot picks it up again after a restart |
+| `candles` | Historical candles from the real Binance market, used for backtesting |
 
 You can open it with [DB Browser for SQLite](https://sqlitebrowser.org/).
 
@@ -79,6 +80,18 @@ uv run bot.py
 ```
 
 Stop it with `Ctrl+C`.
+
+### 5. Download historical candles
+
+```bash
+uv run history.py --symbol BTC/USDT --interval 1m --days 30
+```
+
+The candles come from the real Binance market (no API keys needed) and are saved in `bot.db`. Running it again only
+downloads the candles that are missing. All three options are optional and default to the values in `settings.py`
+and 30 days.
+
+### Logs
 
 Everything the bot does (RSI on each candle, buys, sells and errors) is printed to the console and saved to
 `logs/bot.log`. The file rotates at midnight and the last 30 days are kept.
