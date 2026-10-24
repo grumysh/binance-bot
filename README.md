@@ -93,6 +93,20 @@ Fill in `.env`:
 | `BINANCE_API_KEY` | Binance API key |
 | `BINANCE_API_SECRET` | Binance API secret |
 | `BINANCE_TESTNET` | `true` to use the testnet (default). Set it to `false` only to trade with real money. |
+| `DISCORD_WEBHOOK_URL` | Optional. Discord webhook for notifications |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Optional. Telegram bot and chat for notifications |
+
+### Notifications
+
+The bot can send a message when it starts or stops, on every buy, sell and stop loss, and on errors (a repeated error
+is sent only once). Fill in either channel, or both, and restart the app; the **Notifications** card on the Bot page
+has a **Send test** button.
+
+- **Discord:** in your server, *Server Settings → Integrations → Webhooks → New Webhook*, pick the channel and copy the
+  webhook URL into `DISCORD_WEBHOOK_URL`.
+- **Telegram:** talk to [@BotFather](https://t.me/BotFather), send `/newbot` and copy the token into
+  `TELEGRAM_BOT_TOKEN`. Send any message to your new bot, open
+  `https://api.telegram.org/bot<token>/getUpdates` and copy `message.chat.id` into `TELEGRAM_CHAT_ID`.
 
 ### 4. Start the bot
 

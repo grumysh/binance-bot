@@ -2,6 +2,7 @@ from nicegui import run, ui
 
 import backtest_page
 import market
+import notifier
 import storage
 from bot import Bot, load_settings, setup_logging, testnet
 from chart import chart_options
@@ -81,6 +82,20 @@ def index():
             trades_search.bind_value_to(trades_table, 'filter')
 
         with ui.card().classes('w-full'):
+            ui.label('Notifications').classes('text-lg font-semibold')
+            with ui.row().classes('w-full items-center justify-between'):
+                configured = notifier.channels()
+                if configured:
+                    ui.label(f'Sending to {" and ".join(configured)} on start, stop, buys, sells and errors.')
+                else:
+                    ui.label(
+                        'No channels configured. Add DISCORD_WEBHOOK_URL, or TELEGRAM_BOT_TOKEN and '
+                        'TELEGRAM_CHAT_ID, to .env and restart the app.'
+                    ).classes('text-gray-600')
+                test_button = ui.button('Send test', icon='notifications')
+                test_button.enabled = bool(configured)
+
+        with ui.card().classes('w-full'):
             ui.label('Settings').classes('text-lg font-semibold')
             settings_hint = ui.label('Stop the bot to change the settings.').classes('text-orange-600')
             inputs = settings_form()
@@ -95,6 +110,14 @@ def index():
         apply_settings(trading_bot, settings)
         await refresh_market()
 
+    async def send_test():
+        sent = await run.io_bound(notifier.send, 'Test notification from the Binance bot')
+        if sent:
+            ui.notify(f'Sent to {" and ".join(sent)}', type='positive')
+        else:
+            ui.notify('Could not send it, check the log', type='negative')
+
+    test_button.on_click(send_test)
     save_button.on_click(save)
     defaults_button.on_click(lambda: show_settings(inputs, Settings()))
     show_settings(inputs, trading_bot.settings)

@@ -5,6 +5,7 @@ from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 import market
+import notifier
 import storage
 import strategy
 from market import testnet
@@ -45,6 +46,7 @@ class Bot:
         self.settings = settings
         self.exchange = market.create_exchange()
         self.last_check = None
+        self.last_error = None
         self.stop_requested = threading.Event()
         self.thread = None
 
@@ -64,14 +66,19 @@ class Bot:
 
     def run(self):
         db = storage.connect()
-        log.info(f'Starting on {"testnet" if testnet else "REAL ACCOUNT"} with {self.settings}')
-        position = storage.get_position(db, self.settings.symbol, testnet)
+        settings = self.settings
+        log.info(f'Starting on {"testnet" if testnet else "REAL ACCOUNT"} with {settings}')
+        message = f'Bot started: {settings.symbol} {settings.interval} {strategy.name(settings)}'
+        position = storage.get_position(db, settings.symbol, testnet)
         if position is not None:
             log.info(f'Open position: {position["amount"]} at {position["entry_price"]} since {position["opened_at"]}')
+            message += f', open position of {position["amount"]} bought at {position["entry_price"]}'
+        notifier.send(message)
         while not self.stop_requested.is_set():
             self.trade(db)
             self.stop_requested.wait(self.seconds_until_next_candle())
         log.info('Stopped')
+        notifier.send('Bot stopped')
 
     def interval_ms(self):
         return self.exchange.parse_timeframe(self.settings.interval) * 1000
@@ -104,7 +111,9 @@ class Bot:
                 order = self.exchange.create_market_buy_order_with_cost(settings.symbol, settings.order_size_usdt)
                 amount = bought_amount(order, coin)
                 storage.record_buy(db, order, amount, testnet)
-                log.info(f'BUY {amount} {coin} at {order["average"]} for {order["cost"]} USDT')
+                message = f'BUY {amount} {coin} at {order["average"]} for {order["cost"]} USDT'
+                log.info(message)
+                notifier.send(message)
 
             if action in ('sell', 'stop_loss'):
                 available = position['amount'] + storage.get_leftover(db, settings.symbol, testnet)
@@ -115,9 +124,15 @@ class Bot:
                 profit = order['cost'] - order['filled'] * position['entry_price']
                 reason = 'STOP LOSS' if action == 'stop_loss' else 'SELL'
                 log.info(f'{reason} {amount} {coin} at {order["average"]} for {order["cost"]} USDT (P/L before fees: {profit:.4f} USDT, leftover kept: {leftover:.8f} {coin})')
+                notifier.send(f'{reason} {amount} {coin} at {order["average"]} for {order["cost"]} USDT, P/L before fees {profit:+.4f} USDT')
 
-        except Exception:
+            self.last_error = None
+
+        except Exception as error:
             log.exception('Error')
+            if str(error) != self.last_error:
+                self.last_error = str(error)
+                notifier.send(f'Error: {error}')
 
 
 if __name__ == '__main__':
