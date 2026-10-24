@@ -4,6 +4,7 @@ from nicegui import run, ui
 
 import market
 import storage
+from chart import chart_options
 from bot import Bot, load_settings, setup_logging, testnet
 from settings import INTERVALS, MIN_ORDER_USDT, SYMBOLS, Settings
 
@@ -34,8 +35,8 @@ def index():
             with ui.row().classes('w-full items-center justify-between'):
                 status = ui.label().classes('text-lg font-semibold')
                 with ui.row():
-                    start_button = ui.button('Start', icon='play_arrow', color='green', on_click=trading_bot.start)
-                    stop_button = ui.button('Stop', icon='stop', color='red', on_click=trading_bot.stop)
+                    start_button = ui.button('Start', icon='play_arrow', color='green')
+                    stop_button = ui.button('Stop', icon='stop', color='red')
             last_check = ui.label().classes('text-gray-500')
 
         with ui.card().classes('w-full'):
@@ -50,6 +51,10 @@ def index():
                 coin_balance = stat('Coin balance')
                 signal = stat('Signal now')
             position = ui.label().classes('text-gray-600')
+
+        with ui.card().classes('w-full'):
+            ui.label('Chart').classes('text-lg font-semibold')
+            price_chart = ui.echart({}).classes('w-full h-[480px]')
 
         with ui.card().classes('w-full'):
             ui.label('Settings').classes('text-lg font-semibold')
@@ -136,9 +141,10 @@ def index():
             last_check.text = 'No checks yet'
 
     loading = False
+    chart_key = None
 
     async def refresh_market():
-        nonlocal loading
+        nonlocal loading, chart_key
         if loading:
             return
         loading = True
@@ -150,6 +156,8 @@ def index():
             return
         finally:
             loading = False
+        if data is None:
+            return
 
         coin = data['coin']
         price.text = f'{data["price"]:,.2f} USDT'
@@ -186,6 +194,15 @@ def index():
             position.classes(replace='text-gray-600')
         updated.text = f'Updated {data["time"]:%H:%M:%S}'
 
+        key = (settings, data['chart'].index[-1], len(data['trades']))
+        if key != chart_key:
+            chart_key = key
+            price_chart.options.clear()
+            price_chart.options.update(chart_options(data['chart'], data['trades'], settings))
+            price_chart.update()
+
+    start_button.on_click(lambda: (trading_bot.start(), refresh()))
+    stop_button.on_click(lambda: (trading_bot.stop(), refresh()))
     refresh()
     ui.timer(1.0, refresh)
     ui.timer(15.0, refresh_market)
