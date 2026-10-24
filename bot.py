@@ -5,8 +5,10 @@ from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 import ccxt
+import pandas as pd
 from dotenv import load_dotenv
 
+import indicators
 import storage
 from settings import Settings
 
@@ -46,28 +48,12 @@ def get_closes():
     candles = exchange.fetch_ohlcv(settings.symbol, settings.interval, limit=100)
     now = exchange.milliseconds()
     closed = [candle for candle in candles if candle[0] + interval_ms() <= now]
-    return [candle[4] for candle in closed]
+    return pd.Series([candle[4] for candle in closed])
 
 
 def wait_for_next_candle():
     now = exchange.milliseconds()
     time.sleep((interval_ms() - now % interval_ms()) / 1000 + 2)
-
-
-def rsi(closes, period):
-    changes = [current - previous for previous, current in zip(closes, closes[1:])]
-    gains = [max(change, 0) for change in changes]
-    losses = [max(-change, 0) for change in changes]
-
-    avg_gain = sum(gains[:period]) / period
-    avg_loss = sum(losses[:period]) / period
-    for gain, loss in zip(gains[period:], losses[period:]):
-        avg_gain = (avg_gain * (period - 1) + gain) / period
-        avg_loss = (avg_loss * (period - 1) + loss) / period
-
-    if avg_loss == 0:
-        return 100.0
-    return 100 - 100 / (1 + avg_gain / avg_loss)
 
 
 def bought_amount(order, coin):
@@ -78,7 +64,7 @@ def bought_amount(order, coin):
 def trade():
     try:
         closes = get_closes()
-        last_rsi = rsi(closes, settings.rsi_period)
+        last_rsi = indicators.rsi(closes, settings.rsi_period).iloc[-1]
         log.info(f'{settings.symbol} RSI: {last_rsi:.2f}')
 
         coin = settings.symbol.split('/')[0]

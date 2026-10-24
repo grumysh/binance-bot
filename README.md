@@ -9,6 +9,7 @@ funds unless you explicitly switch it to the real exchange.
 - **[uv](https://docs.astral.sh/uv/)** for the Python version, virtual environment and dependencies
 - **[ccxt](https://github.com/ccxt/ccxt)** to talk to Binance
 - **[python-dotenv](https://github.com/theskumar/python-dotenv)** to load the API keys from `.env`
+- **[pandas](https://pandas.pydata.org/)** to work with candles and calculate the indicators (`indicators.py`)
 - **SQLite** to store trades and open positions
 
 ## How it works
