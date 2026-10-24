@@ -8,7 +8,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "RSI trading bot for the Binance Spot testnet",
   "dependencies": {
     "binance-api-node": "^0.13.6",
     "dotenv": "^17.2.3",

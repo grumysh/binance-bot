@@ -2,18 +2,21 @@ require('dotenv').config()
 const Binance = require('binance-api-node').default
 const { RSI } = require('technicalindicators')
 
-// Cliente Binance
+if (!process.env.BINANCE_HTTP_BASE) {
+  console.error('Missing BINANCE_HTTP_BASE in .env')
+  process.exit(1)
+}
+
 const client = Binance({
   apiKey: process.env.BINANCE_API_KEY,
   apiSecret: process.env.BINANCE_API_SECRET,
-  httpBase: 'https://testnet.binance.vision'
+  httpBase: process.env.BINANCE_HTTP_BASE
 })
 
-// CONFIGURACIÓN
 const SYMBOL = 'XAIUSDT'
 const INTERVAL = '1m'
 const RSI_PERIOD = 14
-const ORDER_SIZE = 10 // USDT
+const ORDER_SIZE_USDT = 10
 let inPosition = false
 
 async function getCloses() {
@@ -38,18 +41,18 @@ async function trade() {
     console.log(`RSI: ${lastRSI}`)
 
     if (lastRSI < 30 && !inPosition) {
-      console.log('COMPRANDO...')
+      console.log('BUYING...')
       await client.order({
         symbol: SYMBOL,
         side: 'BUY',
         type: 'MARKET',
-        quoteOrderQty: ORDER_SIZE
+        quoteOrderQty: ORDER_SIZE_USDT
       })
       inPosition = true
     }
 
     if (lastRSI > 70 && inPosition) {
-      console.log('VENDIENDO...')
+      console.log('SELLING...')
       const balance = await client.accountInfo()
       const asset = SYMBOL.replace('USDT', '')
 
@@ -70,5 +73,4 @@ async function trade() {
   }
 }
 
-// Ejecutar cada minuto
 setInterval(trade, 60 * 1000)
