@@ -16,6 +16,14 @@ def rsi(closes, period=14):
     return value.where(avg_loss != 0, 100.0).where(avg_gain.notna())
 
 
+def sma(closes, period):
+    return closes.rolling(period).mean()
+
+
+def trend(closes, period):
+    return sma(closes, period) if period else pd.Series(float('nan'), index=closes.index)
+
+
 def candles_frame(rows):
     frame = pd.DataFrame([dict(row) for row in rows], columns=['time', 'open', 'high', 'low', 'close', 'volume'])
     frame.index = pd.to_datetime(frame.pop('time'), unit='ms', utc=True)

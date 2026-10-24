@@ -46,7 +46,7 @@ def interval_ms():
 
 
 def get_closes():
-    candles = exchange.fetch_ohlcv(settings.symbol, settings.interval, limit=100)
+    candles = exchange.fetch_ohlcv(settings.symbol, settings.interval, limit=1000)
     now = exchange.milliseconds()
     closed = [candle for candle in candles if candle[0] + interval_ms() <= now]
     return pd.Series([candle[4] for candle in closed])
@@ -66,11 +66,12 @@ def trade():
     try:
         closes = get_closes()
         last_rsi = indicators.rsi(closes, settings.rsi_period).iloc[-1]
-        log.info(f'{settings.symbol} RSI: {last_rsi:.2f}')
+        last_trend = indicators.trend(closes, settings.trend_period).iloc[-1]
+        log.info(f'{settings.symbol} close: {closes.iloc[-1]} RSI: {last_rsi:.2f} trend: {last_trend:.2f}')
 
         coin = settings.symbol.split('/')[0]
         position = storage.get_position(db, settings.symbol, testnet)
-        action = strategy.signal(last_rsi, position is not None, settings)
+        action = strategy.signal(last_rsi, closes.iloc[-1], last_trend, position is not None, settings)
 
         if action == 'buy':
             order = exchange.create_market_buy_order_with_cost(settings.symbol, settings.order_size_usdt)

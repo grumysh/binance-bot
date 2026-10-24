@@ -18,11 +18,14 @@ Every time a candle closes, the bot:
 
 1. Downloads the last closed one-minute candles for the selected symbol (`BTC/USDT` by default).
 2. Calculates the 14-period RSI from the closing prices.
-3. **Buys** 10 USDT worth of the coin at market price when the RSI drops below 30 and it has no open position.
+3. **Buys** 10 USDT worth of the coin at market price when the RSI drops below 30 and it has no open position. If the
+   trend filter is on (`trend_period` in `settings.py`), it only buys while the price is above the average of the last
+   `trend_period` candles, so it doesn't buy into a falling market.
 4. **Sells** only the amount it bought, at market price, when the RSI goes above 70 and it has an open position. The
    amount is rounded to the step size Binance accepts.
 
-The available symbols and the default settings (symbol, candle interval, RSI period, buy and sell levels, order size)
+The available symbols and the default settings (symbol, candle interval, RSI period, buy and sell levels, trend filter,
+order size)
 live in `settings.py`.
 
 | Symbol | Notes |
@@ -118,8 +121,8 @@ each signal, with Binance's rounding and the given fee per trade (0.1% by defaul
 uv run compare.py --symbols BTC/USDT ETH/USDT --days 180 --fee 0.1
 ```
 
-It backtests every combination of candle interval (5m, 15m, 1h, 4h) and RSI levels (20/80, 25/75, 30/70, 35/65) for
-the given symbols and prints a table sorted by total profit. A configuration that wins on one period can lose on
+It backtests every combination of candle interval (5m, 15m, 1h, 4h), RSI levels (20/80, 25/75, 30/70, 35/65) and
+trend filter (off, 100, 200) for the given symbols and prints a table sorted by total profit. A configuration that wins on one period can lose on
 another, so check the best ones on a different period before trusting them.
 
 ### Logs

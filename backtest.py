@@ -14,7 +14,10 @@ exchange = history.exchange
 
 def simulate(candles, settings, fee_rate):
     exchange.load_markets()
-    candles = candles.assign(rsi=indicators.rsi(candles['close'], settings.rsi_period))
+    candles = candles.assign(
+        rsi=indicators.rsi(candles['close'], settings.rsi_period),
+        trend=indicators.trend(candles['close'], settings.trend_period),
+    )
     rows = list(candles.itertuples())
 
     trades = []
@@ -22,7 +25,7 @@ def simulate(candles, settings, fee_rate):
     leftover = 0.0
 
     for current, following in zip(rows, rows[1:]):
-        action = strategy.signal(current.rsi, position is not None, settings)
+        action = strategy.signal(current.rsi, current.close, current.trend, position is not None, settings)
         price = following.open
 
         if action == 'buy':
@@ -104,7 +107,8 @@ def print_summary(result, settings, fee_rate):
     duration = str(m['average_duration'].round('1min')).replace('0 days ', '')
 
     print(f'{settings.symbol} {settings.interval} | RSI {settings.rsi_period} buy < {settings.rsi_buy_below} '
-          f'sell > {settings.rsi_sell_above} | {settings.order_size_usdt} USDT per trade | fee {fee_rate * 100}%')
+          f'sell > {settings.rsi_sell_above} | trend filter {settings.trend_period or "off"} '
+          f'| {settings.order_size_usdt} USDT per trade | fee {fee_rate * 100}%')
     print()
     print(f'Closed trades:        {m["trades"]}')
     print(f'Win rate:             {m["win_rate"]:.1f}%')
