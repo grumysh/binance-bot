@@ -92,6 +92,17 @@ The candles come from the real Binance market (no API keys needed) and are saved
 downloads the candles that are missing. All three options are optional and default to the values in `settings.py`
 and 30 days.
 
+### 6. Backtest the strategy
+
+```bash
+uv run backtest.py --symbol BTC/USDT --interval 1m --days 30 --fee 0.1
+```
+
+It downloads any missing candles and replays the strategy on them, buying and selling at the open of the candle after
+each signal, with Binance's rounding and the given fee per trade (0.1% by default). It prints the profit of the closed
+trades, the fees paid, the value of the coin left unsold after rounding, the open position and a buy and hold
+comparison.
+
 ### Logs
 
 Everything the bot does (RSI on each candle, buys, sells and errors) is printed to the console and saved to

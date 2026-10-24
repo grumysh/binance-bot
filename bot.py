@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 import indicators
 import storage
+import strategy
 from settings import Settings
 
 load_dotenv()
@@ -69,14 +70,15 @@ def trade():
 
         coin = settings.symbol.split('/')[0]
         position = storage.get_position(db, settings.symbol, testnet)
+        action = strategy.signal(last_rsi, position is not None, settings)
 
-        if last_rsi < settings.rsi_buy_below and position is None:
+        if action == 'buy':
             order = exchange.create_market_buy_order_with_cost(settings.symbol, settings.order_size_usdt)
             amount = bought_amount(order, coin)
             storage.record_buy(db, order, amount, testnet)
             log.info(f'BUY {amount} {coin} at {order["average"]} for {order["cost"]} USDT')
 
-        if last_rsi > settings.rsi_sell_above and position is not None:
+        if action == 'sell':
             amount = exchange.amount_to_precision(settings.symbol, position['amount'])
             order = exchange.create_market_sell_order(settings.symbol, amount)
             storage.record_sell(db, order, testnet)
