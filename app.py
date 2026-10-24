@@ -1,13 +1,23 @@
 from dataclasses import asdict
 
-from nicegui import ui
+from nicegui import run, ui
 
+import market
 import storage
 from bot import Bot, load_settings, setup_logging, testnet
 from settings import INTERVALS, MIN_ORDER_USDT, SYMBOLS, Settings
 
 setup_logging()
 trading_bot = Bot(load_settings())
+dashboard_exchange = market.create_exchange()
+
+SIGNAL_TEXT = {'buy': 'Buy', 'sell': 'Sell', None: 'Wait'}
+
+
+def stat(title):
+    with ui.column().classes('gap-0'):
+        ui.label(title).classes('text-xs uppercase text-gray-500')
+        return ui.label('-').classes('text-xl font-semibold')
 
 
 @ui.page('/')
@@ -27,6 +37,19 @@ def index():
                     start_button = ui.button('Start', icon='play_arrow', color='green', on_click=trading_bot.start)
                     stop_button = ui.button('Stop', icon='stop', color='red', on_click=trading_bot.stop)
             last_check = ui.label().classes('text-gray-500')
+
+        with ui.card().classes('w-full'):
+            with ui.row().classes('w-full items-center justify-between'):
+                ui.label('Market and account').classes('text-lg font-semibold')
+                updated = ui.label().classes('text-gray-500 text-sm')
+            with ui.grid(columns=3).classes('w-full gap-4'):
+                price = stat('Price')
+                rsi = stat('RSI (last closed candle)')
+                trend = stat('Trend filter')
+                usdt_balance = stat('USDT balance')
+                coin_balance = stat('Coin balance')
+                signal = stat('Signal now')
+            position = ui.label().classes('text-gray-600')
 
         with ui.card().classes('w-full'):
             ui.label('Settings').classes('text-lg font-semibold')
@@ -56,7 +79,7 @@ def index():
         for name, value in asdict(settings).items():
             inputs[name].value = value
 
-    def save():
+    async def save():
         values = {name: element.value for name, element in inputs.items()}
         if any(value is None for value in values.values()):
             ui.notify('Fill in all the settings', type='negative')
@@ -75,6 +98,7 @@ def index():
         trading_bot.settings = settings
         trading_bot.last_check = None
         ui.notify('Settings saved', type='positive')
+        await refresh_market()
         if settings.symbol != previous.symbol and storage.get_position(db, previous.symbol, testnet):
             ui.notify(
                 f'There is an open {previous.symbol} position. It stays open until you switch back to {previous.symbol}.',
@@ -111,8 +135,61 @@ def index():
         else:
             last_check.text = 'No checks yet'
 
+    loading = False
+
+    async def refresh_market():
+        nonlocal loading
+        if loading:
+            return
+        loading = True
+        settings = trading_bot.settings
+        try:
+            data = await run.io_bound(market.snapshot, dashboard_exchange, settings)
+        except Exception as error:
+            updated.text = f'Could not load: {error}'
+            return
+        finally:
+            loading = False
+
+        coin = data['coin']
+        price.text = f'{data["price"]:,.2f} USDT'
+        rsi.text = f'{data["rsi"]:.2f}'
+        rsi.classes(replace='text-xl font-semibold')
+        if data['rsi'] < settings.rsi_buy_below:
+            rsi.classes('text-green-600')
+        elif data['rsi'] > settings.rsi_sell_above:
+            rsi.classes('text-red-600')
+
+        if settings.trend_period:
+            above = data['last_close'] > data['trend']
+            trend.text = f'{"Above" if above else "Below"} {data["trend"]:,.2f}'
+            trend.classes(replace=f'text-xl font-semibold {"text-green-600" if above else "text-orange-600"}')
+        else:
+            trend.text = 'Off'
+            trend.classes(replace='text-xl font-semibold')
+
+        usdt_balance.text = f'{data["usdt_balance"]:,.2f}'
+        coin_balance.text = f'{data["coin_balance"]:,.8f} {coin}'
+        signal.text = SIGNAL_TEXT[data['signal']]
+
+        open_position = data['position']
+        if open_position:
+            profit = open_position['profit']
+            position.text = (
+                f'Open position: {open_position["amount"]:.8f} {coin} bought at {open_position["entry_price"]:,.2f} '
+                f'for {open_position["cost"]:.2f} USDT · now worth {open_position["value"]:.2f} USDT · '
+                f'{profit:+.2f} USDT ({open_position["profit_percent"]:+.2f}%)'
+            )
+            position.classes(replace='text-green-600' if profit >= 0 else 'text-red-600')
+        else:
+            position.text = f'No open {settings.symbol} position'
+            position.classes(replace='text-gray-600')
+        updated.text = f'Updated {data["time"]:%H:%M:%S}'
+
     refresh()
     ui.timer(1.0, refresh)
+    ui.timer(15.0, refresh_market)
+    ui.timer(0, refresh_market, once=True)
 
 
 if __name__ in {'__main__', '__mp_main__'}:

@@ -1,22 +1,15 @@
 import logging
-import os
 import threading
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
-import ccxt
-import pandas as pd
-from dotenv import load_dotenv
-
 import indicators
+import market
 import storage
 import strategy
+from market import testnet
 from settings import Settings
-
-load_dotenv()
-
-testnet = os.getenv('BINANCE_TESTNET', 'true').lower() != 'false'
 
 log = logging.getLogger('bot')
 
@@ -51,11 +44,7 @@ def bought_amount(order, coin):
 class Bot:
     def __init__(self, settings):
         self.settings = settings
-        self.exchange = ccxt.binance({
-            'apiKey': os.getenv('BINANCE_API_KEY'),
-            'secret': os.getenv('BINANCE_API_SECRET'),
-        })
-        self.exchange.set_sandbox_mode(testnet)
+        self.exchange = market.create_exchange()
         self.last_check = None
         self.stop_requested = threading.Event()
         self.thread = None
@@ -92,16 +81,10 @@ class Bot:
         now = self.exchange.milliseconds()
         return (self.interval_ms() - now % self.interval_ms()) / 1000 + 2
 
-    def get_closes(self):
-        candles = self.exchange.fetch_ohlcv(self.settings.symbol, self.settings.interval, limit=1000)
-        now = self.exchange.milliseconds()
-        closed = [candle for candle in candles if candle[0] + self.interval_ms() <= now]
-        return pd.Series([candle[4] for candle in closed])
-
     def trade(self, db):
         settings = self.settings
         try:
-            closes = self.get_closes()
+            closes = market.fetch_closes(self.exchange, settings.symbol, settings.interval)
             last_rsi = indicators.rsi(closes, settings.rsi_period).iloc[-1]
             last_trend = indicators.trend(closes, settings.trend_period).iloc[-1]
             self.last_check = {'time': datetime.now(), 'close': closes.iloc[-1], 'rsi': last_rsi, 'trend': last_trend}

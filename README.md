@@ -89,7 +89,9 @@ With the graphical interface:
 uv run app.py
 ```
 
-Then open [http://localhost:8080](http://localhost:8080) and use **Start** and **Stop**. Closing the browser tab doesn't
+Then open [http://localhost:8080](http://localhost:8080) and use **Start** and **Stop**. The page also shows the
+current price, the RSI of the last closed candle, whether the price is above the trend filter, your USDT and coin
+balances, what the strategy would do now and the open position with its profit or loss, refreshed every 15 seconds. Closing the browser tab doesn't
 stop the bot; stopping `app.py` does.
 
 Or only in the console:
