@@ -37,6 +37,7 @@ The bot keeps its data in a SQLite file, `bot.db`, created next to `bot.py` on t
 |---|---|
 | `trades` | Every buy and sell: time, symbol, side, amount, price, cost, fee, testnet or real, Binance order id |
 | `positions` | The open position per symbol and account (testnet or real), so the bot picks it up again after a restart |
+| `leftovers` | Coin left unsold after Binance's rounding, added to the next sell so it never piles up |
 | `candles` | Historical candles from the real Binance market, used for backtesting |
 
 You can open it with [DB Browser for SQLite](https://sqlitebrowser.org/).

@@ -35,6 +35,14 @@ def connect(path=DB_PATH):
             )
         ''')
         db.execute('''
+            CREATE TABLE IF NOT EXISTS leftovers (
+                symbol TEXT NOT NULL,
+                testnet INTEGER NOT NULL,
+                amount REAL NOT NULL,
+                PRIMARY KEY (symbol, testnet)
+            )
+        ''')
+        db.execute('''
             CREATE TABLE IF NOT EXISTS candles (
                 symbol TEXT NOT NULL,
                 interval TEXT NOT NULL,
@@ -85,10 +93,22 @@ def record_buy(db, order, amount, testnet):
         )
 
 
-def record_sell(db, order, testnet):
+def get_leftover(db, symbol, testnet):
+    row = db.execute('SELECT amount FROM leftovers WHERE symbol = ? AND testnet = ?', (symbol, testnet)).fetchone()
+    return row['amount'] if row else 0.0
+
+
+def record_sell(db, order, testnet, leftover):
     with db:
         insert_trade(db, order, 'sell', order['filled'], testnet)
         db.execute('DELETE FROM positions WHERE symbol = ? AND testnet = ?', (order['symbol'], testnet))
+        db.execute(
+            '''
+            INSERT INTO leftovers (symbol, testnet, amount) VALUES (?, ?, ?)
+            ON CONFLICT (symbol, testnet) DO UPDATE SET amount = excluded.amount
+            ''',
+            (order['symbol'], testnet, leftover),
+        )
 
 
 def save_candles(db, symbol, interval, candles):

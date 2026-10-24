@@ -35,8 +35,9 @@ def simulate(candles, settings, fee_rate):
             }
 
         elif action == 'sell':
-            amount = float(exchange.amount_to_precision(settings.symbol, position['amount']))
-            leftover += position['amount'] - amount
+            available = position['amount'] + leftover
+            amount = float(exchange.amount_to_precision(settings.symbol, available))
+            leftover = available - amount
             proceeds = amount * price
             fee = proceeds * fee_rate
             trades.append({

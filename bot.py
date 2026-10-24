@@ -79,11 +79,13 @@ def trade():
             log.info(f'BUY {amount} {coin} at {order["average"]} for {order["cost"]} USDT')
 
         if action == 'sell':
-            amount = exchange.amount_to_precision(settings.symbol, position['amount'])
+            available = position['amount'] + storage.get_leftover(db, settings.symbol, testnet)
+            amount = exchange.amount_to_precision(settings.symbol, available)
             order = exchange.create_market_sell_order(settings.symbol, amount)
-            storage.record_sell(db, order, testnet)
+            leftover = max(available - order['filled'], 0.0)
+            storage.record_sell(db, order, testnet, leftover)
             profit = order['cost'] - position['cost']
-            log.info(f'SELL {amount} {coin} at {order["average"]} for {order["cost"]} USDT (P/L before fees: {profit:.4f} USDT)')
+            log.info(f'SELL {amount} {coin} at {order["average"]} for {order["cost"]} USDT (P/L before fees: {profit:.4f} USDT, leftover kept: {leftover:.8f} {coin})')
 
     except Exception:
         log.exception('Error')
