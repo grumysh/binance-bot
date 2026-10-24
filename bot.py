@@ -8,6 +8,7 @@ import market
 import notifier
 import storage
 import strategy
+from journal import journal, today_profit
 from market import testnet
 from settings import Settings
 
@@ -47,6 +48,7 @@ class Bot:
         self.exchange = market.create_exchange()
         self.last_check = None
         self.last_error = None
+        self.limit_notified_on = None
         self.stop_requested = threading.Event()
         self.thread = None
 
@@ -106,6 +108,18 @@ class Bot:
             position = storage.get_position(db, settings.symbol, testnet)
             entry_price = position['entry_price'] if position is not None else None
             action = strategy.signal(current, previous, entry_price, settings)
+            if action == 'buy':
+                profit_today = today_profit(journal(storage.get_all_trades(db, testnet)))
+                if strategy.daily_limit_reached(profit_today, settings):
+                    action = None
+                    message = (
+                        f'Daily loss limit reached ({profit_today:+.2f} USDT today, limit '
+                        f'{settings.daily_loss_limit_usdt:g} USDT). No new buys until tomorrow.'
+                    )
+                    log.info(message)
+                    if self.limit_notified_on != datetime.now().date():
+                        self.limit_notified_on = datetime.now().date()
+                        notifier.send(message)
 
             if action == 'buy':
                 order = self.exchange.create_market_buy_order_with_cost(settings.symbol, settings.order_size_usdt)

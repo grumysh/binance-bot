@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 import storage
 import strategy
+from journal import journal, today_profit
 
 load_dotenv()
 
@@ -46,6 +47,7 @@ def snapshot(exchange, settings):
     db = storage.connect()
     position = storage.get_position(db, settings.symbol, testnet)
     trades = storage.get_trades(db, settings.symbol, testnet, chart.index[0].isoformat())
+    profit_today = today_profit(journal(storage.get_all_trades(db, testnet)))
     if position is not None:
         position = dict(position)
         position['value'] = position['amount'] * price
@@ -66,4 +68,6 @@ def snapshot(exchange, settings):
         'position': position,
         'chart': chart,
         'trades': [dict(trade) for trade in trades],
+        'today_profit': profit_today,
+        'daily_limit_reached': strategy.daily_limit_reached(profit_today, settings),
     }

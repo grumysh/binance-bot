@@ -58,6 +58,10 @@ def signal(current, previous, entry_price, settings):
     return None
 
 
+def daily_limit_reached(today_profit, settings):
+    return bool(settings.daily_loss_limit_usdt) and today_profit <= -settings.daily_loss_limit_usdt
+
+
 def name(settings):
     if settings.strategy == 'rsi':
         return f'RSI {settings.rsi_buy_below:g}/{settings.rsi_sell_above:g}'

@@ -1,5 +1,6 @@
 import argparse
 from dataclasses import replace
+from datetime import datetime
 
 import pandas as pd
 
@@ -20,11 +21,16 @@ def simulate(candles, settings, fee_rate):
     trades = []
     position = None
     leftover = 0.0
+    daily_profit = {}
+    zone = datetime.now().astimezone().tzinfo
 
     for previous, current, following in zip(rows, rows[1:], rows[2:]):
         entry_price = position['entry_price'] if position is not None else None
         action = strategy.signal(current, previous, entry_price, settings)
         price = following['open']
+        day = following['time'].tz_convert(zone).date()
+        if action == 'buy' and strategy.daily_limit_reached(daily_profit.get(day, 0.0), settings):
+            action = None
 
         if action == 'buy':
             amount = float(exchange.amount_to_precision(settings.symbol, settings.order_size_usdt / price))
@@ -44,14 +50,16 @@ def simulate(candles, settings, fee_rate):
             leftover = available - amount
             proceeds = amount * price
             fee = proceeds * fee_rate
+            profit = proceeds - fee - position['cost'] + (leftover - previous_leftover) * price
+            daily_profit[day] = daily_profit.get(day, 0.0) + profit
             trades.append({
                 **position,
                 'exit_time': following['time'],
                 'exit_price': price,
-                'exit_reason': 'stop loss' if action == 'stop_loss' else 'RSI',
+                'exit_reason': 'stop loss' if action == 'stop_loss' else 'strategy',
                 'proceeds': proceeds - fee,
                 'fees': position['fees'] + fee,
-                'profit': proceeds - fee - position['cost'] + (leftover - previous_leftover) * price,
+                'profit': profit,
             })
             position = None
 

@@ -38,5 +38,17 @@ def summary(rows):
     }
 
 
+def local_zone():
+    return datetime.now().astimezone().tzinfo
+
+
+def today_profit(rows):
+    midnight = pd.Timestamp.now(tz=local_zone()).normalize()
+    return sum(
+        row['profit'] for row in rows
+        if row['profit'] is not None and pd.Timestamp(row['time']) >= midnight
+    )
+
+
 def local_time(iso_time):
-    return pd.Timestamp(iso_time).tz_convert(datetime.now().astimezone().tzinfo).strftime('%Y-%m-%d %H:%M')
+    return pd.Timestamp(iso_time).tz_convert(local_zone()).strftime('%Y-%m-%d %H:%M')

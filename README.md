@@ -26,6 +26,8 @@ Every time a candle closes, the bot:
    amount is rounded to the step size Binance accepts.
 5. If the stop loss is on (`stop_loss_percent`, off by default), it also sells when a candle closes that percentage
    below the buy price. It is checked at the candle close, so the real loss can be bigger than the percentage.
+6. If the daily loss limit is on (`daily_loss_limit_usdt`, off by default) and the trades closed today (local time)
+   already lost that amount, it doesn't buy again until tomorrow. It still sells an open position.
 
 ### Strategies
 
@@ -39,7 +41,7 @@ Every time a candle closes, the bot:
 The trend filter and the stop loss work with every strategy.
 
 The available symbols and the default settings (symbol, candle interval, strategy and its parameters, trend filter,
-stop loss, order size)
+stop loss, daily loss limit, order size)
 live in `settings.py`. You can change them from the app while the bot is stopped; they are validated and saved in
 `bot.db`, and both `app.py` and `bot.py` use the saved settings.
 

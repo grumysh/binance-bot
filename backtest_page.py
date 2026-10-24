@@ -121,7 +121,9 @@ def register(trading_bot):
             results_card.visible = True
             results_title.text = (
                 f'{settings.symbol} {settings.interval} · last {days_count} days · {strategy.name(settings)} · trend filter {settings.trend_period or "off"} · '
-                f'stop loss {f"{settings.stop_loss_percent:g}%" if settings.stop_loss_percent else "off"} · fee {fee_rate * 100:g}%'
+                f'stop loss {f"{settings.stop_loss_percent:g}%" if settings.stop_loss_percent else "off"} · '
+                f'daily loss limit {f"{settings.daily_loss_limit_usdt:g} USDT" if settings.daily_loss_limit_usdt else "off"} · '
+                f'fee {fee_rate * 100:g}%'
             )
             total.text = f'{m["total"]:+.2f} USDT ({m["total_percent"]:+.1f}%)'
             total.classes(replace=f'text-xl font-semibold {"text-green-600" if m["total"] > 0 else "text-red-600"}')

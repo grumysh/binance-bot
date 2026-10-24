@@ -35,6 +35,7 @@ class Settings:
     bollinger_deviations: float = 2
     trend_period: int = 200
     stop_loss_percent: float = 0
+    daily_loss_limit_usdt: float = 0
     order_size_usdt: float = 10
 
     def __post_init__(self):
@@ -56,6 +57,8 @@ class Settings:
             raise ValueError('The trend period must be 0 (off) or more')
         if not 0 <= self.stop_loss_percent < 100:
             raise ValueError('The stop loss must be between 0 (off) and 100%')
+        if self.daily_loss_limit_usdt < 0:
+            raise ValueError('The daily loss limit must be 0 (off) or more')
         if self.order_size_usdt < MIN_ORDER_USDT:
             raise ValueError(f'The order size must be at least {MIN_ORDER_USDT} USDT, the Binance minimum')
 

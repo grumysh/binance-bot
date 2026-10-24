@@ -53,6 +53,7 @@ def index():
                 coin_balance = stat('Coin balance')
                 signal = stat('Signal now')
             position = ui.label().classes('text-gray-600')
+            today = ui.label().classes('text-gray-600')
 
         with ui.card().classes('w-full'):
             ui.label('Chart').classes('text-lg font-semibold')
@@ -228,6 +229,14 @@ def index():
         else:
             position.text = f'No open {settings.symbol} position'
             position.classes(replace='text-gray-600')
+        today.text = f'Today: {data["today_profit"]:+.2f} USDT from closed trades'
+        if settings.daily_loss_limit_usdt:
+            today.text += f' · daily loss limit {settings.daily_loss_limit_usdt:g} USDT'
+        if data['daily_limit_reached']:
+            today.text += ' · limit reached, no new buys until tomorrow'
+            today.classes(replace='text-red-600')
+        else:
+            today.classes(replace='text-gray-600')
         updated.text = f'Updated {data["time"]:%H:%M:%S}'
 
         key = (settings, data['chart'].index[-1], len(data['trades']))

@@ -44,6 +44,7 @@ def settings_form():
             'bollinger_deviations': ui.number('Bollinger width (standard deviations)', min=0.5, step=0.5),
             'trend_period': ui.number('Trend filter (candles, 0 = off)', min=0, precision=0),
             'stop_loss_percent': ui.number('Stop loss (% below the buy price, 0 = off)', min=0, max=99, step=0.5),
+            'daily_loss_limit_usdt': ui.number('Daily loss limit (USDT, 0 = off)', min=0, step=0.5),
             'order_size_usdt': ui.number(f'Order size (USDT, minimum {MIN_ORDER_USDT})', min=MIN_ORDER_USDT),
         }
     strategy_fields = {
