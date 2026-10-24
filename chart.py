@@ -99,3 +99,41 @@ def chart_options(candles, trades, settings):
             },
         ],
     }
+
+
+def trade_markers(trades, open_position):
+    markers = []
+    for trade in trades:
+        markers.append({'side': 'buy', 'time': trade['entry_time'], 'price': trade['entry_price']})
+        markers.append({'side': 'sell', 'time': trade['exit_time'], 'price': trade['exit_price']})
+    if open_position:
+        markers.append({'side': 'buy', 'time': open_position['entry_time'], 'price': open_position['entry_price']})
+    return markers
+
+
+def equity_options(trades):
+    local_zone = datetime.now().astimezone().tzinfo
+    labels = [trade['exit_time'].tz_convert(local_zone).strftime('%m-%d %H:%M') for trade in trades]
+    total = 0.0
+    equity = []
+    for trade in trades:
+        total += trade['profit']
+        equity.append(round(total, 4))
+
+    return {
+        'animation': False,
+        'tooltip': {'trigger': 'axis'},
+        'grid': {'left': 70, 'right': 20, 'top': 20, 'bottom': 40},
+        'xAxis': {'type': 'category', 'data': labels},
+        'yAxis': {'type': 'value', 'name': 'USDT'},
+        'series': [{
+            'name': 'Accumulated result',
+            'type': 'line',
+            'data': equity,
+            'step': 'end',
+            'showSymbol': False,
+            'lineStyle': {'color': BLUE},
+            'itemStyle': {'color': BLUE},
+            'areaStyle': {'opacity': 0.1, 'color': BLUE},
+        }],
+    }

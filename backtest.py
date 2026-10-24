@@ -62,7 +62,17 @@ def simulate(candles, settings, fee_rate):
         'leftover': leftover,
         'last_price': rows[-1].close,
         'first_price': rows[0].close,
+        'candles': candles,
     }
+
+
+def run(settings, days, fee_rate):
+    db = storage.connect()
+    history.download_candles(db, settings.symbol, settings.interval, days)
+    since = exchange.milliseconds() - days * history.DAY_MS
+    candles = indicators.candles_frame(storage.load_candles(db, settings.symbol, settings.interval, since))
+    result = simulate(candles, settings, fee_rate)
+    return result, metrics(result, settings)
 
 
 def metrics(result, settings):
@@ -139,8 +149,5 @@ if __name__ == '__main__':
 
     settings = replace(defaults, symbol=args.symbol, interval=args.interval)
     fee_rate = args.fee / 100
-    db = storage.connect()
-    history.download_candles(db, settings.symbol, settings.interval, args.days)
-    since = exchange.milliseconds() - args.days * history.DAY_MS
-    candles = indicators.candles_frame(storage.load_candles(db, settings.symbol, settings.interval, since))
-    print_summary(simulate(candles, settings, fee_rate), settings, fee_rate)
+    result, _ = run(settings, args.days, fee_rate)
+    print_summary(result, settings, fee_rate)

@@ -95,7 +95,12 @@ balances, what the strategy would do now and the open position with its profit o
 Below it, a candlestick chart of the last 150 candles shows the trend line, the bot's buys and sells and the RSI with
 its buy and sell levels. At the bottom, the trades table lists every buy and sell of the current account (testnet or
 real) with its fee and, for each sell, the result after fees compared with the cost of the amount sold, plus a summary
-and a search box. Closing the browser tab doesn't
+and a search box.
+
+The **Backtest** page runs the same backtest and comparison as `backtest.py` and `compare.py` from the browser: pick
+the settings, the days of history and the fee, then see the metrics, the chart with the simulated buys and sells, the
+accumulated result and every simulated trade. The comparison table loads a configuration into the form with one click,
+and **Use these settings in the bot** saves it for the bot. Closing the browser tab doesn't
 stop the bot; stopping `app.py` does.
 
 Or only in the console:
