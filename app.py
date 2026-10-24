@@ -46,7 +46,7 @@ def index():
                 updated = ui.label().classes('text-gray-500 text-sm')
             with ui.grid(columns=3).classes('w-full gap-4'):
                 price = stat('Price')
-                rsi = stat('RSI (last closed candle)')
+                rsi = stat('Indicators (last closed candle)')
                 trend = stat('Trend filter')
                 usdt_balance = stat('USDT balance')
                 coin_balance = stat('Coin balance')
@@ -119,7 +119,7 @@ def index():
         if check:
             last_check.text = (
                 f'Last check {check["time"]:%H:%M:%S} · {trading_bot.settings.symbol} close {check["close"]} · '
-                f'RSI {check["rsi"]:.2f} · trend {check["trend"]:.2f}'
+                f'{check["indicators"]} · trend {check["trend"]:.2f}'
             )
         else:
             last_check.text = 'No checks yet'
@@ -174,11 +174,11 @@ def index():
 
         coin = data['coin']
         price.text = f'{data["price"]:,.2f} USDT'
-        rsi.text = f'{data["rsi"]:.2f}'
+        rsi.text = data['indicators']
         rsi.classes(replace='text-xl font-semibold')
-        if data['rsi'] < settings.rsi_buy_below:
+        if settings.strategy == 'rsi' and data['rsi'] < settings.rsi_buy_below:
             rsi.classes('text-green-600')
-        elif data['rsi'] > settings.rsi_sell_above:
+        elif settings.strategy == 'rsi' and data['rsi'] > settings.rsi_sell_above:
             rsi.classes('text-red-600')
 
         if settings.trend_period:

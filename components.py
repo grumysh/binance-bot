@@ -4,7 +4,9 @@ from nicegui import ui
 
 import storage
 from market import testnet
-from settings import INTERVALS, MIN_ORDER_USDT, SYMBOLS, Settings
+from settings import INTERVALS, MIN_ORDER_USDT, STRATEGIES, SYMBOLS, Settings
+
+INTEGER_FIELDS = ['rsi_period', 'trend_period', 'ma_fast_period', 'ma_slow_period', 'bollinger_period']
 
 
 def header(current):
@@ -32,13 +34,26 @@ def settings_form():
         inputs = {
             'symbol': ui.select(SYMBOLS, label='Symbol'),
             'interval': ui.select(INTERVALS, label='Candle interval'),
+            'strategy': ui.select(STRATEGIES, label='Strategy'),
+            'rsi_period': ui.number('RSI period', min=2, precision=0),
             'rsi_buy_below': ui.number('Buy when RSI is below', min=1, max=99),
             'rsi_sell_above': ui.number('Sell when RSI is above', min=1, max=99),
-            'rsi_period': ui.number('RSI period', min=2, precision=0),
+            'ma_fast_period': ui.number('Fast moving average (candles)', min=2, precision=0),
+            'ma_slow_period': ui.number('Slow moving average (candles)', min=3, precision=0),
+            'bollinger_period': ui.number('Bollinger period (candles)', min=2, precision=0),
+            'bollinger_deviations': ui.number('Bollinger width (standard deviations)', min=0.5, step=0.5),
             'trend_period': ui.number('Trend filter (candles, 0 = off)', min=0, precision=0),
             'stop_loss_percent': ui.number('Stop loss (% below the buy price, 0 = off)', min=0, max=99, step=0.5),
             'order_size_usdt': ui.number(f'Order size (USDT, minimum {MIN_ORDER_USDT})', min=MIN_ORDER_USDT),
         }
+    strategy_fields = {
+        'rsi': ['rsi_period', 'rsi_buy_below', 'rsi_sell_above'],
+        'ma_cross': ['ma_fast_period', 'ma_slow_period'],
+        'bollinger': ['bollinger_period', 'bollinger_deviations'],
+    }
+    for strategy_key, names in strategy_fields.items():
+        for name in names:
+            inputs[name].bind_visibility_from(inputs['strategy'], 'value', backward=lambda value, key=strategy_key: value == key)
     return inputs
 
 
@@ -52,8 +67,8 @@ def read_settings(inputs):
     if any(value is None for value in values.values()):
         ui.notify('Fill in all the settings', type='negative')
         return None
-    values['rsi_period'] = int(values['rsi_period'])
-    values['trend_period'] = int(values['trend_period'])
+    for name in INTEGER_FIELDS:
+        values[name] = int(values[name])
     try:
         return Settings.from_dict(values)
     except ValueError as error:

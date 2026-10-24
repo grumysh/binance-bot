@@ -14,26 +14,23 @@ exchange = history.exchange
 
 def simulate(candles, settings, fee_rate):
     exchange.load_markets()
-    candles = candles.assign(
-        rsi=indicators.rsi(candles['close'], settings.rsi_period),
-        trend=indicators.trend(candles['close'], settings.trend_period),
-    )
-    rows = list(candles.itertuples())
+    candles = strategy.add_indicators(candles, settings)
+    rows = candles.rename_axis('time').reset_index().to_dict('records')
 
     trades = []
     position = None
     leftover = 0.0
 
-    for current, following in zip(rows, rows[1:]):
+    for previous, current, following in zip(rows, rows[1:], rows[2:]):
         entry_price = position['entry_price'] if position is not None else None
-        action = strategy.signal(current.rsi, current.close, current.trend, entry_price, settings)
-        price = following.open
+        action = strategy.signal(current, previous, entry_price, settings)
+        price = following['open']
 
         if action == 'buy':
             amount = float(exchange.amount_to_precision(settings.symbol, settings.order_size_usdt / price))
             fee = amount * fee_rate
             position = {
-                'entry_time': following.Index,
+                'entry_time': following['time'],
                 'entry_price': price,
                 'amount': amount - fee,
                 'cost': amount * price,
@@ -49,7 +46,7 @@ def simulate(candles, settings, fee_rate):
             fee = proceeds * fee_rate
             trades.append({
                 **position,
-                'exit_time': following.Index,
+                'exit_time': following['time'],
                 'exit_price': price,
                 'exit_reason': 'stop loss' if action == 'stop_loss' else 'RSI',
                 'proceeds': proceeds - fee,
@@ -62,8 +59,8 @@ def simulate(candles, settings, fee_rate):
         'trades': trades,
         'open_position': position,
         'leftover': leftover,
-        'last_price': rows[-1].close,
-        'first_price': rows[0].close,
+        'last_price': rows[-1]['close'],
+        'first_price': rows[0]['close'],
         'candles': candles,
     }
 
@@ -119,7 +116,7 @@ def print_summary(result, settings, fee_rate):
     duration = str(m['average_duration'].round('1min')).replace('0 days ', '')
 
     print(f'{settings.symbol} {settings.interval} | RSI {settings.rsi_period} buy < {settings.rsi_buy_below} '
-          f'sell > {settings.rsi_sell_above} | trend filter {settings.trend_period or "off"} '
+          f'sell > {settings.rsi_sell_above} | strategy {strategy.name(settings)} | trend filter {settings.trend_period or "off"} '
           f'| stop loss {f"{settings.stop_loss_percent:g}%" if settings.stop_loss_percent else "off"} '
           f'| {settings.order_size_usdt} USDT per trade | fee {fee_rate * 100}%')
     print()

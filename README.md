@@ -19,15 +19,26 @@ Every time a candle closes, the bot:
 
 1. Downloads the last closed candles for the selected symbol and interval (`BTC/USDT` and one hour by default).
 2. Calculates the 14-period RSI from the closing prices.
-3. **Buys** 10 USDT worth of the coin at market price when the RSI drops below 30 and it has no open position. If the
+3. **Buys** 10 USDT worth of the coin at market price when the strategy says so and it has no open position. If the
    trend filter is on (`trend_period` in `settings.py`, 200 by default), it only buys while the price is above the
    average of the last `trend_period` candles, so it doesn't buy into a falling market.
-4. **Sells** only the amount it bought, at market price, when the RSI goes above 70 and it has an open position. The
+4. **Sells** only the amount it bought, at market price, when the strategy says so and it has an open position. The
    amount is rounded to the step size Binance accepts.
 5. If the stop loss is on (`stop_loss_percent`, off by default), it also sells when a candle closes that percentage
    below the buy price. It is checked at the candle close, so the real loss can be bigger than the percentage.
 
-The available symbols and the default settings (symbol, candle interval, RSI period, buy and sell levels, trend filter,
+### Strategies
+
+| Strategy | Buys when | Sells when |
+|---|---|---|
+| **RSI** (default, 30/70) | The RSI drops below the buy level | The RSI goes above the sell level |
+| **Moving average cross** (20/50) | The fast average crosses above the slow one | The fast average crosses below the slow one |
+| **Bollinger bands** (20 candles, 2 deviations) | The price closes below the lower band | The price closes above the middle band |
+| **MACD** (12/26/9) | The MACD line crosses above its signal line | The MACD line crosses below its signal line |
+
+The trend filter and the stop loss work with every strategy.
+
+The available symbols and the default settings (symbol, candle interval, strategy and its parameters, trend filter,
 stop loss, order size)
 live in `settings.py`. You can change them from the app while the bot is stopped; they are validated and saved in
 `bot.db`, and both `app.py` and `bot.py` use the saved settings.
@@ -148,8 +159,8 @@ each signal, with Binance's rounding and the given fee per trade (0.1% by defaul
 uv run compare.py --symbols BTC/USDT ETH/USDT --days 180 --fee 0.1
 ```
 
-It backtests every combination of candle interval (5m, 15m, 1h, 4h), RSI levels (20/80, 25/75, 30/70, 35/65) and
-trend filter (off, 100, 200) for the given symbols and prints a table sorted by total profit. A configuration that wins on one period can lose on
+It backtests every combination of candle interval (5m, 15m, 1h, 4h), strategy (RSI 20/80, 25/75, 30/70 and 35/65,
+moving average cross, Bollinger bands and MACD) and trend filter (off, 100, 200) for the given symbols and prints a table sorted by total profit. A configuration that wins on one period can lose on
 another, so check the best ones on a different period before trusting them.
 
 ### Logs

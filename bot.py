@@ -4,7 +4,6 @@ from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
-import indicators
 import market
 import storage
 import strategy
@@ -84,16 +83,22 @@ class Bot:
     def trade(self, db):
         settings = self.settings
         try:
-            closes = market.fetch_closes(self.exchange, settings.symbol, settings.interval)
-            last_rsi = indicators.rsi(closes, settings.rsi_period).iloc[-1]
-            last_trend = indicators.trend(closes, settings.trend_period).iloc[-1]
-            self.last_check = {'time': datetime.now(), 'close': closes.iloc[-1], 'rsi': last_rsi, 'trend': last_trend}
-            log.info(f'{settings.symbol} close: {closes.iloc[-1]} RSI: {last_rsi:.2f} trend: {last_trend:.2f}')
+            candles = market.fetch_candles(self.exchange, settings.symbol, settings.interval)
+            candles = strategy.add_indicators(candles, settings)
+            current, previous = candles.iloc[-1], candles.iloc[-2]
+            indicators_text = strategy.describe(current, settings)
+            self.last_check = {
+                'time': datetime.now(),
+                'close': current['close'],
+                'indicators': indicators_text,
+                'trend': current['trend'],
+            }
+            log.info(f'{settings.symbol} close: {current["close"]} {indicators_text} trend: {current["trend"]:.2f}')
 
             coin = settings.symbol.split('/')[0]
             position = storage.get_position(db, settings.symbol, testnet)
             entry_price = position['entry_price'] if position is not None else None
-            action = strategy.signal(last_rsi, closes.iloc[-1], last_trend, entry_price, settings)
+            action = strategy.signal(current, previous, entry_price, settings)
 
             if action == 'buy':
                 order = self.exchange.create_market_buy_order_with_cost(settings.symbol, settings.order_size_usdt)

@@ -20,6 +20,21 @@ def sma(closes, period):
     return closes.rolling(period).mean()
 
 
+def ema(closes, period):
+    return closes.ewm(span=period, adjust=False).mean()
+
+
+def bollinger(closes, period, deviations):
+    middle = sma(closes, period)
+    spread = closes.rolling(period).std(ddof=0) * deviations
+    return middle - spread, middle, middle + spread
+
+
+def macd(closes, fast=12, slow=26, signal=9):
+    line = ema(closes, fast) - ema(closes, slow)
+    return line, ema(line, signal)
+
+
 def trend(closes, period):
     return sma(closes, period) if period else pd.Series(float('nan'), index=closes.index)
 

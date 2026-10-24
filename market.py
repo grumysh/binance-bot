@@ -5,7 +5,6 @@ import ccxt
 import pandas as pd
 from dotenv import load_dotenv
 
-import indicators
 import storage
 import strategy
 
@@ -36,19 +35,9 @@ def fetch_candles(exchange, symbol, interval):
     return frame
 
 
-def fetch_closes(exchange, symbol, interval):
-    return fetch_candles(exchange, symbol, interval)['close']
-
-
 def snapshot(exchange, settings):
-    candles = fetch_candles(exchange, settings.symbol, settings.interval)
-    closes = candles['close']
-    candles = candles.assign(
-        rsi=indicators.rsi(closes, settings.rsi_period),
-        trend=indicators.trend(closes, settings.trend_period),
-    )
-    rsi = candles['rsi'].iloc[-1]
-    trend = candles['trend'].iloc[-1]
+    candles = strategy.add_indicators(fetch_candles(exchange, settings.symbol, settings.interval), settings)
+    current, previous = candles.iloc[-1], candles.iloc[-2]
     chart = candles.tail(CHART_CANDLES)
     price = exchange.fetch_ticker(settings.symbol)['last']
     balance = exchange.fetch_balance()['total']
@@ -67,10 +56,11 @@ def snapshot(exchange, settings):
         'time': datetime.now(),
         'coin': coin,
         'price': price,
-        'last_close': closes.iloc[-1],
-        'rsi': rsi,
-        'trend': trend,
-        'signal': strategy.signal(rsi, closes.iloc[-1], trend, position and position['entry_price'], settings),
+        'last_close': current['close'],
+        'rsi': current['rsi'],
+        'trend': current['trend'],
+        'indicators': strategy.describe(current, settings),
+        'signal': strategy.signal(current, previous, position and position['entry_price'], settings),
         'coin_balance': balance.get(coin, 0.0),
         'usdt_balance': balance.get('USDT', 0.0),
         'position': position,

@@ -11,6 +11,13 @@ SYMBOLS = [
 
 INTERVALS = ['1m', '5m', '15m', '1h', '4h']
 
+STRATEGIES = {
+    'rsi': 'RSI',
+    'ma_cross': 'Moving average cross',
+    'bollinger': 'Bollinger bands',
+    'macd': 'MACD',
+}
+
 MIN_ORDER_USDT = 5
 
 
@@ -18,9 +25,14 @@ MIN_ORDER_USDT = 5
 class Settings:
     symbol: str = 'BTC/USDT'
     interval: str = '1h'
+    strategy: str = 'rsi'
     rsi_period: int = 14
     rsi_buy_below: float = 30
     rsi_sell_above: float = 70
+    ma_fast_period: int = 20
+    ma_slow_period: int = 50
+    bollinger_period: int = 20
+    bollinger_deviations: float = 2
     trend_period: int = 200
     stop_loss_percent: float = 0
     order_size_usdt: float = 10
@@ -30,6 +42,12 @@ class Settings:
             raise ValueError(f'{self.symbol} is not in the available symbols: {", ".join(SYMBOLS)}')
         if self.interval not in INTERVALS:
             raise ValueError(f'{self.interval} is not in the available intervals: {", ".join(INTERVALS)}')
+        if self.strategy not in STRATEGIES:
+            raise ValueError(f'{self.strategy} is not in the available strategies: {", ".join(STRATEGIES)}')
+        if not 2 <= self.ma_fast_period < self.ma_slow_period:
+            raise ValueError('The fast moving average must be at least 2 and shorter than the slow one')
+        if self.bollinger_period < 2 or self.bollinger_deviations <= 0:
+            raise ValueError('The Bollinger period must be at least 2 and the deviations more than 0')
         if self.rsi_period < 2:
             raise ValueError('The RSI period must be at least 2')
         if not 0 < self.rsi_buy_below < self.rsi_sell_above < 100:
