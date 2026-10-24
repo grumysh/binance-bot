@@ -5,12 +5,13 @@ funds unless you explicitly switch it to the real exchange.
 
 ## Tech stack
 
-- **Python 3.15**
+- **Python 3.14**
 - **[uv](https://docs.astral.sh/uv/)** for the Python version, virtual environment and dependencies
 - **[ccxt](https://github.com/ccxt/ccxt)** to talk to Binance
 - **[python-dotenv](https://github.com/theskumar/python-dotenv)** to load the API keys from `.env`
 - **[pandas](https://pandas.pydata.org/)** to work with candles and calculate the indicators (`indicators.py`)
 - **SQLite** to store trades and open positions
+- **[NiceGUI](https://nicegui.io/)** for the graphical interface
 
 ## How it works
 
@@ -79,6 +80,17 @@ Fill in `.env`:
 | `BINANCE_TESTNET` | `true` to use the testnet (default). Set it to `false` only to trade with real money. |
 
 ### 4. Start the bot
+
+With the graphical interface:
+
+```bash
+uv run app.py
+```
+
+Then open [http://localhost:8080](http://localhost:8080) and use **Start** and **Stop**. Closing the browser tab doesn't
+stop the bot; stopping `app.py` does.
+
+Or only in the console:
 
 ```bash
 uv run bot.py
