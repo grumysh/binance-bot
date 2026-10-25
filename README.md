@@ -1,102 +1,130 @@
 # Binance Bot
 
-A simple RSI trading bot for Binance Spot. It runs on the **Binance Spot testnet** by default, so it trades with fake
-funds unless you explicitly switch it to the real exchange.
+A trading bot for Binance Spot with a desktop app. It trades one coin at a time with one of four strategies, shows the
+market, your balances and every trade, and can replay any configuration on historical data before you use it.
 
-## Tech stack
+It runs on the **Binance Spot testnet** by default, so it trades with fake funds unless you explicitly switch it to the
+real exchange.
 
-- **Python 3.14**
-- **[uv](https://docs.astral.sh/uv/)** for the Python version, virtual environment and dependencies
-- **[ccxt](https://github.com/ccxt/ccxt)** to talk to Binance
-- **[python-dotenv](https://github.com/theskumar/python-dotenv)** to load the API keys from `.env`
-- **[pandas](https://pandas.pydata.org/)** to work with candles and calculate the indicators (`indicators.py`)
-- **SQLite** to store trades and open positions
-- **[NiceGUI](https://nicegui.io/)** for the graphical interface
+![Bot page](docs/bot.png)
 
-## How it works
+## Features
 
-Every time a candle closes, the bot:
+- Four strategies: **RSI**, **moving average cross**, **Bollinger bands** and **MACD**, on 1 minute to 4 hour candles.
+- **Trend filter**, **stop loss** and **daily loss limit** for any strategy.
+- Live panel with price, indicators, balances, open position and today's result, plus a candlestick chart with the
+  bot's buys and sells.
+- Trade history with the result of every sell after fees.
+- **Backtesting** on real Binance data, with metrics, charts and a comparison of 84 configurations per symbol.
+- **Notifications** on Discord and Telegram.
+- Everything is saved in a local SQLite file, so the bot picks up an open position after a restart.
+- Windows app (`Binance Bot.exe`) with its own window: no browser, no console.
 
-1. Downloads the last closed candles for the selected symbol and interval (`BTC/USDT` and one hour by default).
-2. Calculates the 14-period RSI from the closing prices.
-3. **Buys** 10 USDT worth of the coin at market price when the strategy says so and it has no open position. If the
-   trend filter is on (`trend_period` in `settings.py`, 200 by default), it only buys while the price is above the
-   average of the last `trend_period` candles, so it doesn't buy into a falling market.
-4. **Sells** only the amount it bought, at market price, when the strategy says so and it has an open position. The
-   amount is rounded to the step size Binance accepts.
-5. If the stop loss is on (`stop_loss_percent`, off by default), it also sells when a candle closes that percentage
-   below the buy price. It is checked at the candle close, so the real loss can be bigger than the percentage.
-6. If the daily loss limit is on (`daily_loss_limit_usdt`, off by default) and the trades closed today (local time)
-   already lost that amount, it doesn't buy again until tomorrow. It still sells an open position.
+## Quick start
+
+1. **Get testnet API keys.** Go to [testnet.binance.vision](https://testnet.binance.vision/), log in with GitHub,
+   generate an **HMAC-SHA-256** key and copy the API key and secret.
+2. **Create a folder** with `Binance Bot.exe` (see [Building the Windows app](#building-the-windows-app)) and a file
+   called `.env` next to it:
+
+   ```
+   BINANCE_API_KEY=your testnet key
+   BINANCE_API_SECRET=your testnet secret
+   BINANCE_TESTNET=true
+   ```
+
+3. **Double-click `Binance Bot.exe`.** Check the settings, press **Start** and leave the window open. The bot works
+   while the app is open; closing it stops the bot.
+
+The first run creates `bot.db` (trades, positions, settings and historical candles) and `logs\` in the same folder.
+
+## User guide
+
+### Bot page
+
+| Card | What it does |
+|---|---|
+| **Status** | **Start** and **Stop**, and the last check of the bot: time, price, indicators and trend. The bot checks once per candle, right after it closes. |
+| **Market and account** | Current price, indicators of the last closed candle, whether the price is above the trend filter, your USDT and coin balances, what the strategy would do now, the open position with its profit or loss and today's result. Refreshed every 15 seconds. |
+| **Chart** | The last 150 candles with the trend line, the strategy's lines, the bot's buys (green) and sells (red), and the RSI or MACD below. Zoom with the mouse wheel or the bar at the bottom. |
+| **Trades** | Every buy and sell of the current account, with the fee and, for each sell, the result after fees. The summary shows the win rate, total result and fees. |
+| **Notifications** | Which channels are configured, with a **Send test** button. |
+| **Settings** | The bot's configuration. It can only be changed while the bot is stopped, and it is validated and saved when you press **Save**. |
+
+### Settings
+
+| Setting | Default | Meaning |
+|---|---|---|
+| Symbol | BTC/USDT | Coin to trade: BTC, ETH, SOL, BNB, XRP or DOGE against USDT |
+| Candle interval | 1h | 1m, 5m, 15m, 1h or 4h. The bot checks once per candle |
+| Strategy | RSI | See the table below. Only the fields of the chosen strategy are shown |
+| Trend filter | 200 | Only buy while the price is above the average of this many candles. 0 turns it off |
+| Stop loss | off | Sell when a candle closes this percentage below the buy price |
+| Daily loss limit | off | After losing this many USDT in a day (local time), don't buy again until tomorrow. Open positions are still sold |
+| Order size | 10 USDT | How much each buy spends. Binance's minimum is 5 USDT |
 
 ### Strategies
 
 | Strategy | Buys when | Sells when |
 |---|---|---|
-| **RSI** (default, 30/70) | The RSI drops below the buy level | The RSI goes above the sell level |
+| **RSI** (30/70) | The RSI drops below the buy level | The RSI goes above the sell level |
 | **Moving average cross** (20/50) | The fast average crosses above the slow one | The fast average crosses below the slow one |
 | **Bollinger bands** (20 candles, 2 deviations) | The price closes below the lower band | The price closes above the middle band |
 | **MACD** (12/26/9) | The MACD line crosses above its signal line | The MACD line crosses below its signal line |
 
-The trend filter and the stop loss work with every strategy.
+The bot only holds one position per symbol. It buys at market price for the order size and sells exactly what it
+bought. Binance only accepts amounts in fixed steps, so a tiny bit of coin can be left after a sell; the bot remembers
+it and adds it to the next sell, so it never piles up.
 
-The available symbols and the default settings (symbol, candle interval, strategy and its parameters, trend filter,
-stop loss, daily loss limit, order size)
-live in `settings.py`. You can change them from the app while the bot is stopped; they are validated and saved in
-`bot.db`, and both `app.py` and `bot.py` use the saved settings.
+### Backtest page
 
-| Symbol | Notes |
+![Backtest page](docs/backtest.png)
+
+Pick a configuration, the days of history and the fee, and press **Run backtest**. It downloads the candles it needs
+from the real Binance market and replays the strategy, buying and selling at the open of the candle after each signal,
+with Binance's rounding and the fee on every trade. You get:
+
+| Metric | Meaning |
 |---|---|
-| `BTC/USDT`, `ETH/USDT`, `SOL/USDT`, `BNB/USDT`, `XRP/USDT`, `DOGE/USDT` | Highest volume, they move on the testnet |
+| Total result | Result of the closed trades plus the open position, in USDT and as a percentage of the order size |
+| Buy and hold | What buying at the start and holding until the end would have made |
+| Win rate | Percentage of closed trades with a profit |
+| Profit factor | Total won divided by total lost. Above 1 the strategy makes money |
+| Max drawdown | Biggest drop of the accumulated result from its highest point |
+| Average duration | Average time between a buy and its sell |
 
-### Data
+Below them are the chart with the simulated trades, the accumulated result and the list of simulated trades.
 
-The bot keeps its data in a SQLite file, `bot.db`, created next to `bot.py` on the first run:
+**Compare** tests 84 configurations per symbol (4 intervals, 7 strategy variants and 3 trend filters) and sorts them
+by result. Click a row to load it in the form, and **Use these settings in the bot** to save it for the bot.
 
-| Table | Contents |
-|---|---|
-| `trades` | Every buy and sell: time, symbol, side, amount, price, cost, fee, testnet or real, Binance order id |
-| `positions` | The open position per symbol and account (testnet or real), so the bot picks it up again after a restart |
-| `settings` | The settings saved from the app |
-| `leftovers` | Coin left unsold after Binance's rounding, added to the next sell so it never piles up |
-| `candles` | Historical candles from the real Binance market, used for backtesting |
+A configuration that wins in one period can lose in another. Before trusting one, check it with a different number of
+days and on other symbols.
 
-You can open it with [DB Browser for SQLite](https://sqlitebrowser.org/).
+### What the backtests showed
 
-### Limitations
+On 360 days of the six symbols, split into a falling market (−44% buy and hold) and a rising one (+2%):
 
-- There is no stop loss.
+- Short candles (1 to 15 minutes) lose with almost every configuration, especially without the trend filter: the
+  fees eat the small moves.
+- The **trend filter** improves every strategy, mostly by avoiding buys while the market falls.
+- **1 hour candles, RSI 30/70 and a 200 candle trend filter** (the default) had the best result over both periods:
+  +1.6% and +8.5% on average, with very few trades. Only two other configurations, both RSI with the trend filter,
+  made a little money in both.
+- The moving average cross on 4 hour candles did well in the rising market (+15.5%) but lost in the falling one.
+- A stop loss didn't improve the results of these strategies; it mostly cut the trades that would have recovered.
 
-## Running it
+### Notifications
 
-### 1. Install uv
+The bot can send a message when it starts or stops, on every buy, sell and stop loss, when the daily loss limit is
+reached, and on errors (a repeated error is sent only once). Add either channel, or both, to `.env` and restart the
+app:
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-uv downloads the right Python version automatically the first time the bot runs.
-
-### 2. Get testnet API keys
-
-1. Go to [testnet.binance.vision](https://testnet.binance.vision/) and log in with GitHub.
-2. Generate an **HMAC-SHA-256** key and copy the API key and secret.
-
-### 3. Configure the environment
-
-```bash
-cp .env.example .env
-```
-
-Fill in `.env`:
-
-| Variable | Description |
-|---|---|
-| `BINANCE_API_KEY` | Binance API key |
-| `BINANCE_API_SECRET` | Binance API secret |
-| `BINANCE_TESTNET` | `true` to use the testnet (default). Set it to `false` only to trade with real money. |
-| `DISCORD_WEBHOOK_URL` | Optional. Discord webhook for notifications |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Optional. Telegram bot and chat for notifications |
+- **Discord:** in your server, *Server Settings → Integrations → Webhooks → New Webhook*, pick the channel and copy the
+  webhook URL into `DISCORD_WEBHOOK_URL`.
+- **Telegram:** talk to [@BotFather](https://t.me/BotFather), send `/newbot` and copy the token into
+  `TELEGRAM_BOT_TOKEN`. Send any message to your new bot, open
+  `https://api.telegram.org/bot<token>/getUpdates` and copy `message.chat.id` into `TELEGRAM_CHAT_ID`.
 
 ### Trading with real money
 
@@ -107,126 +135,105 @@ Don't, unless you accept losing the money you put in. If you do:
 2. Put that key and secret in `.env` (testnet keys don't work on the real exchange) and set `BINANCE_TESTNET=false`.
 3. Start with a small order size and the daily loss limit on.
 
-In real mode the app shows a red banner, and **Start** asks you to type `REAL` before the bot runs. `uv run bot.py`
-asks the same in the console. Trades, positions and leftovers are kept apart from the testnet ones in `bot.db`.
+In real mode the app shows a red banner, and **Start** asks you to type `REAL` before the bot runs. Trades, positions
+and leftovers of the real account are kept apart from the testnet ones.
 
-### Notifications
+## Developer guide
 
-The bot can send a message when it starts or stops, on every buy, sell and stop loss, and on errors (a repeated error
-is sent only once). Fill in either channel, or both, and restart the app; the **Notifications** card on the Bot page
-has a **Send test** button.
+### Tech stack
 
-- **Discord:** in your server, *Server Settings → Integrations → Webhooks → New Webhook*, pick the channel and copy the
-  webhook URL into `DISCORD_WEBHOOK_URL`.
-- **Telegram:** talk to [@BotFather](https://t.me/BotFather), send `/newbot` and copy the token into
-  `TELEGRAM_BOT_TOKEN`. Send any message to your new bot, open
-  `https://api.telegram.org/bot<token>/getUpdates` and copy `message.chat.id` into `TELEGRAM_CHAT_ID`.
+- **Python 3.14** with **[uv](https://docs.astral.sh/uv/)** for the Python version, environment and dependencies
+- **[ccxt](https://github.com/ccxt/ccxt)** to talk to Binance
+- **[pandas](https://pandas.pydata.org/)** for candles and indicators
+- **[NiceGUI](https://nicegui.io/)** for the interface, with **ECharts** for the charts
+- **SQLite** for trades, positions, settings and candles
+- **[pywebview](https://pywebview.flowrl.com/)** and **[PyInstaller](https://pyinstaller.org/)** for the Windows app
+- **[pytest](https://pytest.org/)** for the tests
 
-### 4. Start the bot
-
-With the graphical interface:
+### Running from source
 
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+cp .env.example .env
 uv run app.py
 ```
 
-Then open [http://localhost:8080](http://localhost:8080) and use **Start** and **Stop**. The page also shows the
-current price, the RSI of the last closed candle, whether the price is above the trend filter, your USDT and coin
-balances, what the strategy would do now and the open position with its profit or loss, refreshed every 15 seconds.
-Below it, a candlestick chart of the last 150 candles shows the trend line, the bot's buys and sells and the RSI with
-its buy and sell levels. At the bottom, the trades table lists every buy and sell of the current account (testnet or
-real) with its fee and, for each sell, the result after fees compared with the cost of the amount sold, plus a summary
-and a search box.
+Fill in `.env` first, then open [http://localhost:8080](http://localhost:8080). uv installs Python and the
+dependencies on the first run. On Windows, `uv run app.py --window` opens the app in its own window instead.
 
-The **Backtest** page runs the same backtest and comparison as `backtest.py` and `compare.py` from the browser: pick
-the settings, the days of history and the fee, then see the metrics, the chart with the simulated buys and sells, the
-accumulated result and every simulated trade. The comparison table loads a configuration into the form with one click,
-and **Use these settings in the bot** saves it for the bot. Closing the browser tab doesn't
-stop the bot; stopping `app.py` does.
-
-Or only in the console:
-
-```bash
-uv run bot.py
-```
-
-Stop it with `Ctrl+C`.
-
-### 5. Download historical candles
-
-```bash
-uv run history.py --symbol BTC/USDT --interval 1m --days 30
-```
-
-The candles come from the real Binance market (no API keys needed) and are saved in `bot.db`. Running it again only
-downloads the candles that are missing. All three options are optional and default to the values in `settings.py`
-and 30 days.
-
-### 6. Backtest the strategy
-
-```bash
-uv run backtest.py --symbol BTC/USDT --interval 1m --days 30 --fee 0.1
-```
-
-It downloads any missing candles and replays the strategy on them, buying and selling at the open of the candle after
-each signal, with Binance's rounding and the given fee per trade (0.1% by default). It prints:
-
-| Metric | Meaning |
+| Variable | Description |
 |---|---|
-| Win rate | Percentage of closed trades with a profit |
-| Average win / loss | Average profit of the winning and of the losing trades |
-| Best / worst trade | Biggest single profit and loss |
-| Profit factor | Total won divided by total lost. Above 1 the strategy makes money |
-| Max drawdown | Biggest drop of the accumulated profit from its highest point |
-| Average duration | Average time between a buy and its sell |
-| Total | Profit of the closed trades plus the open position, compared with buying and holding |
+| `BINANCE_API_KEY`, `BINANCE_API_SECRET` | Binance API key and secret |
+| `BINANCE_TESTNET` | `true` to use the testnet (default), `false` to trade with real money |
+| `DISCORD_WEBHOOK_URL` | Optional. Discord webhook for notifications |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Optional. Telegram bot and chat for notifications |
 
-### 7. Compare configurations
+### Command line
 
-```bash
-uv run compare.py --symbols BTC/USDT ETH/USDT --days 180 --fee 0.1
-```
+| Command | What it does |
+|---|---|
+| `uv run bot.py` | Runs the bot without the interface, with the saved settings. Stop it with `Ctrl+C` |
+| `uv run history.py --symbol BTC/USDT --interval 1h --days 30` | Downloads historical candles into `bot.db`, only the missing ones |
+| `uv run backtest.py --symbol BTC/USDT --interval 1h --days 180 --fee 0.1` | Backtests the default strategy and prints the metrics |
+| `uv run compare.py --symbols BTC/USDT ETH/USDT --days 180 --fee 0.1` | Compares the 84 configurations per symbol |
 
-It backtests every combination of candle interval (5m, 15m, 1h, 4h), strategy (RSI 20/80, 25/75, 30/70 and 35/65,
-moving average cross, Bollinger bands and MACD) and trend filter (off, 100, 200) for the given symbols and prints a table sorted by total profit. A configuration that wins on one period can lose on
-another, so check the best ones on a different period before trusting them.
+### Project structure
 
-### Logs
+| File | Contents |
+|---|---|
+| `app.py` | Bot page and app entry point |
+| `backtest_page.py` | Backtest page |
+| `components.py` | Pieces shared by both pages: header, stats and settings form |
+| `chart.py` | Chart options for ECharts |
+| `bot.py` | The bot: a background thread that checks the strategy on every candle close and trades |
+| `strategy.py` | Buy and sell rules of the four strategies, trend filter, stop loss and daily loss limit |
+| `indicators.py` | RSI, moving averages, Bollinger bands and MACD |
+| `settings.py` | Settings, defaults and validation |
+| `market.py` | Binance connection, closed candles and the snapshot for the panel |
+| `storage.py` | SQLite database |
+| `journal.py` | Trade results and today's result |
+| `notifier.py` | Discord and Telegram notifications |
+| `history.py`, `backtest.py`, `compare.py` | Historical candles, backtest simulation and comparison |
+| `paths.py` | Where `bot.db`, `logs` and `.env` live: next to the code, or next to the exe |
 
-Everything the bot does (RSI on each candle, buys, sells and errors) is printed to the console and saved to
-`logs/bot.log`. The file rotates at midnight and the last 30 days are kept.
+### Data
 
-## Windows app
+`bot.db` is a SQLite file. You can open it with [DB Browser for SQLite](https://sqlitebrowser.org/).
 
-`Binance Bot.exe` opens the app in its own window, without a browser or a console. To build it, on Windows:
+| Table | Contents |
+|---|---|
+| `trades` | Every buy and sell: time, symbol, side, amount, price, cost, fee, testnet or real, Binance order id |
+| `positions` | The open position per symbol and account |
+| `leftovers` | Coin left unsold after Binance's rounding, added to the next sell |
+| `settings` | The settings saved from the app |
+| `candles` | Historical candles from the real Binance market, for backtesting |
 
-1. Install uv in PowerShell: `irm https://astral.sh/uv/install.ps1 | iex`
-2. Clone the repository and, inside it, run:
+Everything the bot does is also written to `logs/bot.log`, which rotates at midnight and keeps the last 30 days.
 
-   ```powershell
-   .\build.ps1
-   ```
-
-   It installs the desktop dependencies (pywebview and PyInstaller) and creates `dist\Binance Bot.exe`.
-
-3. Put `Binance Bot.exe` in its own folder together with your `.env`. The first run creates `bot.db` and `logs\` in
-   that same folder.
-
-To get the same window while developing on Windows, run `uv run app.py --window`.
-
-## Tests
+### Tests
 
 ```bash
 uv run pytest
 ```
 
-The tests cover the indicators, the four strategies with the trend filter, stop loss and daily loss limit, the settings
-validation, the database, the trade results, the backtest simulation, the bot's buys and sells (including Binance's
-rounding and the leftover coin) and both pages of the app. They use a fake exchange and a temporary database, so they
-run without internet and never touch `bot.db`, the logs or your Binance account.
+65 tests cover the indicators, the strategies with the trend filter, stop loss and daily loss limit, the settings
+validation, the database, the trade results, the backtest, the bot's buys and sells (including Binance's rounding and
+the leftover coin) and both pages of the app. They use a fake exchange and a temporary database, so they run without
+internet and never touch `bot.db`, the logs or your Binance account.
+
+### Building the Windows app
+
+On Windows, install uv in PowerShell with `irm https://astral.sh/uv/install.ps1 | iex`, clone the repository and run:
+
+```powershell
+.\build.ps1
+```
+
+It installs the desktop dependencies and creates `dist\Binance Bot.exe`, a single file of about 66 MB.
+
+![Windows app](docs/windows-app.png)
 
 ## Disclaimer
 
-This is a learning project, not financial advice. A 30/70 RSI strategy on short candles loses money once trading fees
-are included, and even the default settings only look good on past data, with few trades. Don't run it with real
-funds.
+This is a learning project, not financial advice. The backtests only show how a strategy did in the past, with few
+trades, and fees and sudden moves can make any of them lose money. Don't trade with money you can't afford to lose.
