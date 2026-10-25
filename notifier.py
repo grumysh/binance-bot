@@ -6,8 +6,9 @@ import urllib.request
 from dotenv import load_dotenv
 
 from market import testnet
+from paths import APP_DIR
 
-load_dotenv()
+load_dotenv(APP_DIR / '.env')
 
 log = logging.getLogger('bot')
 

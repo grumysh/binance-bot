@@ -8,8 +8,9 @@ from dotenv import load_dotenv
 import storage
 import strategy
 from journal import journal, today_profit
+from paths import APP_DIR
 
-load_dotenv()
+load_dotenv(APP_DIR / '.env')
 
 testnet = os.getenv('BINANCE_TESTNET', 'true').lower() != 'false'
 

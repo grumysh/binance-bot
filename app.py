@@ -1,4 +1,7 @@
-from nicegui import run, ui
+import sys
+from multiprocessing import freeze_support
+
+from nicegui import native, run, ui
 
 import backtest_page
 import market
@@ -293,4 +296,13 @@ def index():
 backtest_page.register(trading_bot)
 
 if __name__ in {'__main__', '__mp_main__'}:
-    ui.run(title='Binance Bot', port=8080, reload=False, show=False)
+    freeze_support()
+    window = getattr(sys, 'frozen', False) or '--window' in sys.argv
+    ui.run(
+        title='Binance Bot',
+        port=native.find_open_port() if window else 8080,
+        reload=False,
+        show=False,
+        native=window,
+        window_size=(1280, 900) if window else None,
+    )

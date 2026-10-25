@@ -2,7 +2,6 @@ import logging
 import threading
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
-from pathlib import Path
 
 import market
 import notifier
@@ -10,13 +9,14 @@ import storage
 import strategy
 from journal import journal, today_profit
 from market import testnet
+from paths import APP_DIR
 from settings import Settings
 
 log = logging.getLogger('bot')
 
 
 def setup_logging():
-    logs_dir = Path(__file__).parent / 'logs'
+    logs_dir = APP_DIR / 'logs'
     logs_dir.mkdir(exist_ok=True)
     file_handler = TimedRotatingFileHandler(logs_dir / 'bot.log', when='midnight', backupCount=30, encoding='utf-8')
     logging.basicConfig(

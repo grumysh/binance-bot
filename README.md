@@ -196,6 +196,24 @@ another, so check the best ones on a different period before trusting them.
 Everything the bot does (RSI on each candle, buys, sells and errors) is printed to the console and saved to
 `logs/bot.log`. The file rotates at midnight and the last 30 days are kept.
 
+## Windows app
+
+`Binance Bot.exe` opens the app in its own window, without a browser or a console. To build it, on Windows:
+
+1. Install uv in PowerShell: `irm https://astral.sh/uv/install.ps1 | iex`
+2. Clone the repository and, inside it, run:
+
+   ```powershell
+   .\build.ps1
+   ```
+
+   It installs the desktop dependencies (pywebview and PyInstaller) and creates `dist\Binance Bot.exe`.
+
+3. Put `Binance Bot.exe` in its own folder together with your `.env`. The first run creates `bot.db` and `logs\` in
+   that same folder.
+
+To get the same window while developing on Windows, run `uv run app.py --window`.
+
 ## Tests
 
 ```bash

@@ -1,8 +1,9 @@
 import json
 import sqlite3
-from pathlib import Path
 
-DB_PATH = Path(__file__).parent / 'bot.db'
+from paths import APP_DIR
+
+DB_PATH = APP_DIR / 'bot.db'
 
 
 def connect(path=None):
